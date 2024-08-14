@@ -1,6 +1,7 @@
 from PyQt5.QtCore import pyqtSignal, QObject, Qt, QRect, QSize, QRegularExpression, QThread, QProcess
 from PyQt5.QtGui import QPainter, QColor, QFont, QTextCursor, QSyntaxHighlighter, QTextCharFormat, QTextFormat
 from usb_i2c import USBI2C
+from usb_ser import USB_UART
 from script_thread import ScriptThread
 from code_editor import CodeEditor
 from python_highlighter import PythonHighlighter
@@ -90,6 +91,7 @@ class I2CConfigPage(QWidget):
     def __init__(self,devices ):
         super().__init__()
         self.usb_i2c = USBI2C()
+        self.usb_uart = USB_UART()
         self.device_address = None  # Initialize with None
         self.script_thread = None  # Initialize script thread to None
         self.devices = devices
@@ -266,12 +268,19 @@ class I2CConfigPage(QWidget):
             self.append_output(f'写入 0x{register_address:02X}: 0x{data:02X}\n')
         except ValueError:
             QMessageBox.critical(self, '错误', '无效的寄存器地址或数据')
+    
+    def write_uart(self,hex_string):
+        try:
+            self.usb_uart.uart_write(hex_string)
+        except ValueError:
+            QMessageBox.critical(self, '错误', '无法配置UART')
+
 
 
     
     def execute_script(self):
         script = self.script_input.toPlainText()
-        self.script_thread = ScriptThread(script, self.read_i2c, self.write_i2c, self.power_switch_function)
+        self.script_thread = ScriptThread(script, self.read_i2c, self.write_i2c, self.write_uart, self.power_switch_function)
         self.script_thread.output.connect(self.append_output)
         self.script_thread.finished.connect(self.on_script_finished)
         self.script_thread.paused.connect(self.on_script_paused)
@@ -429,3 +438,4 @@ class I2CConfigPage(QWidget):
             self.append_output(f'温度读取自寄存器 0x{register_address:02X}: {temperature:.1f} °C\n')
         except Exception as e:
             QMessageBox.critical(self, '错误', f'读取温度时出错: {str(e)}')
+
