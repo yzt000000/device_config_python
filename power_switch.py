@@ -57,10 +57,14 @@ class PowerSupplyControl(QWidget):
     def __init__(self,devices):
         super().__init__()
         self.instruments = devices
-        self.init_ui()
+        #self.init_ui()
+        self.initialized = False  # 添加一个标志来检查是否已经被初始化
 
 
     def init_ui(self):
+        if self.initialized:
+            return
+        self.initialized = True
         self.rm = pyvisa.ResourceManager()
         #self.instruments = self.auto_detect_devices()
 
@@ -413,3 +417,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+
