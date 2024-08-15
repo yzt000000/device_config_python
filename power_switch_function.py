@@ -18,7 +18,11 @@ class power_switch_function():
         self.init_ui()
 
     def init_ui(self):
-        self.rm = pyvisa.ResourceManager()
+        #self.rm = pyvisa.ResourceManager()
+        try:
+            self.rm = pyvisa.ResourceManager()
+        except:
+            self.rm = pyvisa.ResourceManager('@sim')
         #self.instruments = self.auto_detect_devices()
         #self.instruments = {
         #    'PVDD_device': self.rm.open_resource('GPIB0::1::INSTR'),  # 替换为控制 PVDD 的设备的资源字符串
