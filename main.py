@@ -6,7 +6,7 @@ from i2c_config_page import I2CConfigPage
 from excel_viewer_page import ExcelViewerPage
 from output_redirector import OutputRedirector
 from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import QApplication, QStyleFactory, QScrollArea, QVBoxLayout, QWidget, QTabWidget, QCheckBox
+from PyQt5.QtWidgets import QApplication, QStyleFactory, QScrollArea, QVBoxLayout, QWidget, QTabWidget, QCheckBox,QMessageBox
 from power_switch import PowerSupplyControl  # 导入 PowerSupplyControl 类
 from about import AboutPage # 导入AboutPage 
 import pyvisa
@@ -15,6 +15,7 @@ from qt_material import list_themes
 from pprint import pprint
 from qt_material import apply_stylesheet
 import concurrent.futures
+from license_checker import LicenseChecker
 
 
 #rm = pyvisa.ResourceManager('@sim')
@@ -22,6 +23,14 @@ class MainWindow(QWidget):
     def __init__(self):
         super().__init__()
         #self.rm = pyvisa.ResourceManager('@sim')
+
+         # 检查许可证
+        checker = LicenseChecker()
+        if not checker.check_license():
+            QMessageBox.critical(None, "License Error", "Invalid or expired license. Please contact support.")
+            return
+
+        # 如果许可证有效，继续运行程序
         
         # 添加这些行
         self.cache_file = 'device_cache.json'
