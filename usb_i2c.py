@@ -72,7 +72,7 @@ class USBI2C():
             USBI2C.ch341dll.CH341StreamI2C(self.usb_id, 2, obuf, 1, ibuf)
             USBI2C.ch341dll.CH341CloseDevice(self.usb_id)
             #print("i2c read: 0x%x" % ibuf[0])
-            print("read %2x=%2x"%(addr,ibuf[0] & 0xff))
+            #print("read %2x=%2x"%(addr,ibuf[0] & 0xff))
             return ibuf[0] & 0xff
 
         else:
@@ -89,6 +89,6 @@ class USBI2C():
             USBI2C.ch341dll.CH341StreamI2C(self.usb_id, 3, obuf, 0, ibuf)
             USBI2C.ch341dll.CH341CloseDevice(self.usb_id)
             #print("i2c write: 0x%x" % ibuf[0])
-            print("write %2x=%2x"%(addr,dat))
+            #print("write %2x=%2x"%(addr,dat))
         else:
             print("USB CH341 Open Failed!")

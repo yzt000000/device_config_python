@@ -7,10 +7,11 @@ from code_editor import CodeEditor
 from python_highlighter import PythonHighlighter
 #from power_switch import PowerSupplyControl
 from power_switch_function import power_switch_function
+import random
 
 from PyQt5.QtWidgets import (
-    QApplication, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit,
-    QPushButton, QPlainTextEdit, QTextEdit, QMessageBox, QFileDialog, QTabWidget,
+    QApplication, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit,QSpacerItem, QSizePolicy,
+    QPushButton, QPlainTextEdit, QTextEdit, QMessageBox, QFileDialog, QTabWidget,QProgressBar,
     QGridLayout, QFormLayout, QTreeWidget, QTreeWidgetItem, QDialog ,QComboBox 
 )
 
@@ -106,6 +107,7 @@ class I2CConfigPage(QWidget):
         # Device address input and update button
         self.device_address_input = QLineEdit(self)
         self.device_address_input.setText("0x6c")
+        self.device_address_input.setFixedWidth(50)
         
         update_address_button = QPushButton('更新设备地址', self)
         update_address_button.clicked.connect(self.update_device_address)
@@ -113,36 +115,61 @@ class I2CConfigPage(QWidget):
         device_address_layout = QHBoxLayout()
         device_address_layout.addWidget(self.device_address_input)
         device_address_layout.addWidget(update_address_button)
+        device_address_layout.setAlignment(Qt.AlignLeft)
+        device_address_layout.addSpacerItem(QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum))
         
         # Add the device address row to the form layout
         form_layout.addRow(QLabel('设备地址:'), device_address_layout)
         
         self.register_address_input = QLineEdit(self)
         self.register_address_input.setText("00")
+        self.register_address_input.setFixedWidth(50)  # 设置输入框宽度
         self.data_input = QLineEdit(self)
         self.data_input.setText("00")
+        self.data_input.setFixedWidth(50)  # 设置输入框宽度
 
-        form_layout.addRow(QLabel('寄存器地址:'), self.register_address_input)
-        form_layout.addRow(QLabel('数据:'), self.data_input)
+        address_label = QLabel('寄存器地址:')
+        address_label.setFixedWidth(80)  # 设置标签宽度
+        data_label = QLabel('数据:')
+        data_label.setFixedWidth(40)  # 设置标签宽度
 
         button_layout = QHBoxLayout()
+        button_layout.addWidget(address_label)
+        button_layout.addWidget(self.register_address_input)
+        button_layout.addWidget(data_label)
+        button_layout.addWidget(self.data_input)
+
         self.read_button = QPushButton('读', self)
         self.read_button.clicked.connect(self.read_register)
+        #button_layout.addWidget(self.read_button)
         button_layout.addWidget(self.read_button)
 
         self.write_button = QPushButton('写', self)
         self.write_button.clicked.connect(self.write_register)
+        #button_layout.addWidget(self.write_button)
         button_layout.addWidget(self.write_button)
+        button_layout.setAlignment(Qt.AlignLeft)
+        button_layout.addSpacerItem(QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum))
 
 
+        temp_layout = QHBoxLayout()
          # Add temperature label
         self.temperature_label = QLabel('温度: N/A', self)
-        form_layout.addRow(QLabel('温度:'), self.temperature_label)
+        #temp_layout.addWidget(QLabel('温度:'))
+        temp_layout.addWidget(self.temperature_label)
+
+         # Add a progress bar to show temperature
+        self.temperature_progress = QProgressBar(self)
+        self.temperature_progress.setRange(-272, 234)  # Range from absolute zero to max temperature
+        self.temperature_progress.setTextVisible(False)
+        temp_layout.addWidget(self.temperature_progress)
 
         # Add a button to update the temperature
         self.update_temperature_button = QPushButton('更新温度', self)
         self.update_temperature_button.clicked.connect(self.update_temperature)
-        form_layout.addRow(self.update_temperature_button)
+        #form_layout.addRow(self.update_temperature_button)
+        temp_layout.addWidget(self.update_temperature_button)
+        temp_layout.setAlignment(Qt.AlignLeft)
 
         self.script_input = CodeEditor(self)
         self.highlighter = PythonHighlighter(self.script_input.document())
@@ -207,8 +234,15 @@ class I2CConfigPage(QWidget):
         self.status_label.setAlignment(Qt.AlignCenter)
         self.status_label.setStyleSheet("background-color: yellow;")
 
+         # 创建一个 QWidget 作为容器，并设置样式表
+        #layout_container = QWidget()
+        #layout_container.setLayout(temp_layout)
+        #layout_container.setStyleSheet("border: 1px solid black;")  # 设置边界线
+
         layout.addLayout(form_layout)
         layout.addLayout(button_layout)
+        layout.addLayout(temp_layout)
+        #layout.addWidget(layout_container)
         layout.addWidget(self.status_label)
         layout.addWidget(QLabel('Python 脚本:'))
         layout.addWidget(self.script_input)
@@ -429,13 +463,42 @@ class I2CConfigPage(QWidget):
             QMessageBox.critical(self, '错误', f'无法删除临时文件: {str(e)}')
     
 
+    # def update_temperature(self):
+    #     try:
+    #         register_address = 0xE0
+    #         data = self.usb_i2c.read(register_address)
+    #         temperature = (data / 255.0)* 505.78  - 272
+    #         self.temperature_label.setText(f'温度: <b> {temperature:.1f} </b>°C')
+    #         self.append_output(f'温度读取自寄存器 0x{register_address:02X}: {temperature:.1f} °C\n')
+    #     except Exception as e:
+    #         QMessageBox.critical(self, '错误', f'读取温度时出错: {str(e)}')
+
     def update_temperature(self):
         try:
             register_address = 0xE0
             data = self.usb_i2c.read(register_address)
-            temperature = (data / 255.0)* 505.78  - 272
+            #data = random.randint(0,255)
+            temperature = (data / 255.0) * 505.78 - 272
             self.temperature_label.setText(f'温度: <b> {temperature:.1f} </b>°C')
+            self.temperature_progress.setValue(int(temperature))
+            self.set_progress_bar_style(temperature)
             self.append_output(f'温度读取自寄存器 0x{register_address:02X}: {temperature:.1f} °C\n')
         except Exception as e:
             QMessageBox.critical(self, '错误', f'读取温度时出错: {str(e)}')
 
+    # def set_progress_bar_style(self, temperature):
+    #     # Calculate color based on temperature
+    #     red = int(255 * (temperature + 272) / 505.78)
+    #     green = int(255 * (1 - (temperature + 272) / 505.78))
+    #     blue = 0
+    #     color = f'rgb({red}, {green}, {blue})'
+    #     self.temperature_progress.setStyleSheet(f"QProgressBar::chunk {{ background-color: {color}; }}")
+    def set_progress_bar_style(self, temperature):
+        # Calculate color based on temperature
+        temperature = max(-272, min(temperature, 233.78))  # Clamp temperature to valid range
+        normalized_temp = (temperature + 272) / 505.78
+        red = int(255 * normalized_temp)
+        green = 0
+        blue = int(255 * (1 - normalized_temp))
+        color = f'rgb({red}, {green}, {blue})'
+        self.temperature_progress.setStyleSheet(f"QProgressBar::chunk {{ background-color: {color}; }}")
