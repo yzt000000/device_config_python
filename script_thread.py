@@ -1,6 +1,7 @@
 
 from PyQt5.QtCore import QThread, pyqtSignal
 import sys
+import io
 import threading
 import traceback
 import time
@@ -26,7 +27,7 @@ class ScriptThread(QThread):
     
     def run(self):
         try:
-            exec_globals = {
+            globals_dict = {
                 'read_i2c': self.read_func,
                 'write_i2c': self.write_func,
                 'write_uart': self.write_uart_func,
@@ -35,13 +36,27 @@ class ScriptThread(QThread):
                 'time': time,  # Add time module for sleep function
                 'print_colored': self.print_colored  # Add print_colored function
             }
+            locals_dict = {}
+
+            # 重定向标准输出
+            old_stdout = sys.stdout
+            new_stdout = io.StringIO()
+            sys.stdout = new_stdout
             #self.output.emit(f"绑定的 toggle_power_test 方法: {exec_globals['toggle_power_test']}\n")
-            exec(self.script, exec_globals)
-        except SystemExit:
-            self.output.emit("脚本执行已终止\n")
+            #exec(self.script, exec_globals)
+            exec(self.script, globals_dict, locals_dict)
         except Exception as e:
-            self.output.emit(f"脚本执行错误: {str(e)}\n")
-            self.output.emit(traceback.format_exc())
+            error_msg = f'<span style="color: red;">Error: {str(e)}</span>'
+            self.output.emit(error_msg)
+        finally:
+            # 恢复标准输出
+            sys.stdout = old_stdout
+            output = new_stdout.getvalue()
+            if output:
+                self.output.emit(output)
+
+
+
 
 
     

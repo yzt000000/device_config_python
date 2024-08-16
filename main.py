@@ -3,6 +3,7 @@ import os
 import time
 import json
 from i2c_config_page import I2CConfigPage
+from update_status import  UpdateStatus
 from excel_viewer_page import ExcelViewerPage
 from output_redirector import OutputRedirector
 from PyQt5.QtCore import Qt
@@ -25,10 +26,10 @@ class MainWindow(QWidget):
         #self.rm = pyvisa.ResourceManager('@sim')
 
          # 检查许可证
-        checker = LicenseChecker()
-        if not checker.check_license():
-            QMessageBox.critical(None, "License Error", "Invalid or expired license. Please contact support.")
-            return
+        # checker = LicenseChecker()
+        # if not checker.check_license():
+        #     QMessageBox.critical(None, "License Error", "Invalid or expired license. Please contact support.")
+        #     return
 
         # 如果许可证有效，继续运行程序
         
@@ -73,6 +74,7 @@ class MainWindow(QWidget):
 
         self.page1 = I2CConfigPage(self.devices)
         self.page2 = I2CConfigPage(self.devices)
+        self.page3 = UpdateStatus()
         self.excel_viewer_page = ExcelViewerPage()
         self.aboutPage = AboutPage()
         #self.excel_viewer_page.resize(1200,800) 
@@ -85,6 +87,7 @@ class MainWindow(QWidget):
         self.tab_widget.addTab(self.page0, 'Power')
         self.tab_widget.addTab(self.page1, 'Main')
         self.tab_widget.addTab(self.page2, '临时脚本')
+        self.tab_widget.addTab(self.page3, 'Update Status')
 
         self.tab_widget.addTab(self.excel_viewer_page, 'Excel 查看器')
         self.tab_widget.addTab(self.aboutPage, '软件说明')

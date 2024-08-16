@@ -20,74 +20,6 @@ import glob
 import tempfile
 
 
-class ANSIConsole(QPlainTextEdit):
-    ANSI_STYLES = {
-        0: {'color': None, 'background': None, 'weight': None, 'underline': False},
-        1: {'weight': QFont.Bold},
-        4: {'underline': True},
-        30: {'color': QColor(Qt.black)},
-        31: {'color': QColor(Qt.red)},
-        32: {'color': QColor(Qt.green)},
-        33: {'color': QColor(Qt.yellow)},
-        34: {'color': QColor(Qt.blue)},
-        35: {'color': QColor(Qt.magenta)},
-        36: {'color': QColor(Qt.cyan)},
-        37: {'color': QColor(Qt.white)},
-        40: {'background': QColor(Qt.black)},
-        41: {'background': QColor(Qt.red)},
-        42: {'background': QColor(Qt.green)},
-        43: {'background': QColor(Qt.yellow)},
-        44: {'background': QColor(Qt.blue)},
-        45: {'background': QColor(Qt.magenta)},
-        46: {'background': QColor(Qt.cyan)},
-        47: {'background': QColor(Qt.white)},
-    }
-
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.current_format = self.currentCharFormat()
-
-    def append_ansi_text(self, text):
-        cursor = self.textCursor()
-        cursor.beginEditBlock()
-
-        while text:
-            start = text.find('\033[')
-            if start == -1:
-                cursor.insertText(text)
-                break
-
-            cursor.insertText(text[:start])
-            text = text[start + 2:]
-
-            end = text.find('m')
-            if end == -1:
-                cursor.insertText(text)
-                break
-
-            codes = text[:end].split(';')
-            text = text[end + 1:]
-
-            for code in codes:
-                code = int(code) if code.isdigit() else 0
-                style = self.ANSI_STYLES.get(code, {})
-                if 'color' in style:
-                    self.current_format.setForeground(style['color'])
-                if 'background' in style:
-                    self.current_format.setBackground(style['background'])
-                if 'weight' in style:
-                    self.current_format.setFontWeight(style['weight'])
-                if 'underline' in style:
-                    self.current_format.setFontUnderline(style['underline'])
-
-            cursor.setCharFormat(self.current_format)
-
-        cursor.endEditBlock()
-
-
-
-
-
 class I2CConfigPage(QWidget):
     def __init__(self,devices ):
         super().__init__()
@@ -215,10 +147,11 @@ class I2CConfigPage(QWidget):
         self.exit_button.setEnabled(False)
         script_button_layout.addWidget(self.exit_button)
 
-        # self.result_output = QTextEdit(self)
+        self.result_output = QTextEdit(self)
         # self.result_output.setReadOnly(True)
-        self.result_output = ANSIConsole(self)
+        #self.result_output = ANSIConsole(self)
         self.result_output.setReadOnly(True)
+        self.result_output.setAcceptRichText(True)
 
         result_button_layout = QHBoxLayout()
         self.save_output_button = QPushButton('保存输出结果', self)
@@ -264,10 +197,7 @@ class I2CConfigPage(QWidget):
     def clear_script(self):
         self.script_input.clear()
 
-    def append_output(self, text):
-        self.result_output.moveCursor(QTextCursor.End)
-        self.result_output.insertPlainText(text)
-        self.result_output.moveCursor(QTextCursor.End)
+
 
     def save_output(self):
         options = QFileDialog.Options()
@@ -309,9 +239,16 @@ class I2CConfigPage(QWidget):
         except ValueError:
             QMessageBox.critical(self, '错误', '无法配置UART')
 
+    # def append_output(self, text):
+    #     self.result_output.moveCursor(QTextCursor.End)
+    #     self.result_output.insertPlainText(text)
+    #     self.result_output.moveCursor(QTextCursor.End)
 
+    def append_output(self, text):
+        self.result_output.moveCursor(QTextCursor.End)
+        self.result_output.insertHtml(text + "<br>")
+        self.result_output.moveCursor(QTextCursor.End)
 
-    
     def execute_script(self):
         script = self.script_input.toPlainText()
         self.script_thread = ScriptThread(script, self.read_i2c, self.write_i2c, self.write_uart, self.power_switch_function)
@@ -326,8 +263,10 @@ class I2CConfigPage(QWidget):
         self.resume_button.setEnabled(False)
         self.exit_button.setEnabled(True)
         self.status_label.setText('脚本状态: 运行中')
-        #self.status_label.setStyleSheet("background-color: green;")
         self.status_label.setStyleSheet("background-color: rgb(144, 238, 144);")
+
+    
+
 
     def interrupt_script(self):
         if self.script_thread and self.script_thread.isRunning():

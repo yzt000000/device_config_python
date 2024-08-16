@@ -55,6 +55,22 @@ for i in range(10):
     time.sleep(5)
     power_control.set_voltage("PVDD", 0)
     time.sleep(5)
+# 绿色文本
+print('<span style="color: green;">这是一段绿色文本</span>')
+# 蓝色粗体文本
+print('<span style="color: blue; font-weight: bold;">这是一段蓝色粗体文本</span>')
+# 红色斜体文本
+print('<span style="color: red; font-style: italic;">这是一段红色斜体文本</span>')
+# 黑色带下划线文本
+print('<span style="color: black; text-decoration: underline;">这是一段黑色带下划线的文本</span>')
+# 粉色背景色的文本
+print('<span style="background-color: pink;">这段文本有粉色背景</span>')
+# 大号字体文本
+print('<span style="font-size: 20px;">这段文本的字体大小为20px</span>')
+# 小号字体文本
+print('<span style="font-size: 10px;">这段文本的字体大小为10px</span>')
+# 大号加粗斜体文本
+print('<span style="font-size: 24px; font-weight: bold; font-style: italic;">这段文本的字体大小为24px，且加粗和斜体</span>')
 
 """
 
