@@ -21,11 +21,11 @@ import tempfile
 
 
 class I2CConfigPage(QWidget):
-    def __init__(self,devices ):
+    def __init__(self,devices,global_usb_i2c,global_device_address):
         super().__init__()
-        self.usb_i2c = USBI2C()
+        self.usb_i2c = global_usb_i2c
         self.usb_uart = USB_UART()
-        self.device_address = None  # Initialize with None
+        self.device_address = global_device_address  # Initialize with None
         self.script_thread = None  # Initialize script thread to None
         self.devices = devices
         #self.power_supply_control = PowerSupplyControl
@@ -37,21 +37,21 @@ class I2CConfigPage(QWidget):
         form_layout = QFormLayout()
 
         # Device address input and update button
-        self.device_address_input = QLineEdit(self)
-        self.device_address_input.setText("0x6c")
-        self.device_address_input.setFixedWidth(50)
+        # self.device_address_input = QLineEdit(self)
+        # self.device_address_input.setText(f"0x{self.device_address:02X}")
+        # self.device_address_input.setFixedWidth(50)
         
-        update_address_button = QPushButton('更新设备地址', self)
-        update_address_button.clicked.connect(self.update_device_address)
+        # update_address_button = QPushButton('更新设备地址', self)
+        # update_address_button.clicked.connect(self.update_device_address)
 
-        device_address_layout = QHBoxLayout()
-        device_address_layout.addWidget(self.device_address_input)
-        device_address_layout.addWidget(update_address_button)
-        device_address_layout.setAlignment(Qt.AlignLeft)
-        device_address_layout.addSpacerItem(QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum))
+        # device_address_layout = QHBoxLayout()
+        # device_address_layout.addWidget(self.device_address_input)
+        # device_address_layout.addWidget(update_address_button)
+        # device_address_layout.setAlignment(Qt.AlignLeft)
+        # device_address_layout.addSpacerItem(QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum))
         
-        # Add the device address row to the form layout
-        form_layout.addRow(QLabel('设备地址:'), device_address_layout)
+        # # Add the device address row to the form layout
+        # form_layout.addRow(QLabel('设备地址:'), device_address_layout)
         
         self.register_address_input = QLineEdit(self)
         self.register_address_input.setText("00")
@@ -185,14 +185,19 @@ class I2CConfigPage(QWidget):
         layout.addLayout(result_button_layout)
 
         self.setLayout(layout)
+    def update_device_address(self, new_address=None):
+        if new_address is None:
+            try:
+                new_address = int(self.device_address_input.text(), 16)
+            except ValueError:
+                QMessageBox.critical(self, '错误', '无效的设备地址')
+                return
+        
+        self.device_address = new_address
+        self.device_address_input.setText(f"0x{new_address:02X}")
+        self.usb_i2c.update_device_address(new_address)
+        print(f'设备地址更新为: 0x{new_address:02X}')
 
-    def update_device_address(self):
-        try:
-            self.device_address = int(self.device_address_input.text(), 16)
-            self.append_output(f'设备地址更新为: 0x{self.device_address:02X}\n')
-            self.usb_i2c.update_device_address(self.device_address)  # 调用usb_i2c的更新方法
-        except ValueError:
-            QMessageBox.critical(self, '错误', '无效的设备地址')
 
     def clear_script(self):
         self.script_input.clear()

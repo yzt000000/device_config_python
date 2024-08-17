@@ -2,12 +2,13 @@ import sys
 import os
 import time
 import json
+from usb_i2c import USBI2C
 from i2c_config_page import I2CConfigPage
 from update_status import  UpdateStatus
 from excel_viewer_page import ExcelViewerPage
 from output_redirector import OutputRedirector
 from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import QApplication, QStyleFactory, QScrollArea, QVBoxLayout, QWidget, QTabWidget, QCheckBox,QMessageBox
+from PyQt5.QtWidgets import QApplication, QStyleFactory, QScrollArea, QVBoxLayout, QWidget, QTabWidget, QCheckBox,QMessageBox,QLineEdit,QPushButton,QHBoxLayout,QLabel,QComboBox
 from power_switch import PowerSupplyControl  # 导入 PowerSupplyControl 类
 from about import AboutPage # 导入AboutPage 
 import pyvisa
@@ -23,6 +24,8 @@ from license_checker import LicenseChecker
 class MainWindow(QWidget):
     def __init__(self):
         super().__init__()
+        self.global_usb_i2c = USBI2C()
+        self.global_device_address = 0x6C
         #self.rm = pyvisa.ResourceManager('@sim')
 
          # 检查许可证
@@ -50,10 +53,53 @@ class MainWindow(QWidget):
         self.init_ui()
 
 
+
     def init_ui(self):
         layout = QVBoxLayout()
         self.tab_widget = QTabWidget()
         self.resize(1200, 800)
+
+        # self.global_device_address_input = QLineEdit(self)
+        # self.global_device_address_input.setText(f"0x{self.global_device_address:02X}")
+        # self.global_device_address_input.setFixedWidth(50)
+        
+        # update_address_button = QPushButton('更新设备地址', self)
+        # update_address_button.clicked.connect(self.update_global_device_address)
+        
+        # # 将这些控件添加到适当的布局中
+        # global_control_layout = QHBoxLayout()
+        # global_control_layout.addWidget(QLabel('全局设备地址:'))
+        # global_control_layout.addWidget(self.global_device_address_input)
+        # global_control_layout.addWidget(update_address_button)
+        
+        # # 将全局控制面板添加到主布局中
+        # layout.addLayout(global_control_layout)
+    
+        self.global_device_address_input = QComboBox(self)
+        self.global_device_address_input.setFixedWidth(100)
+        # 添加地址范围选项
+        for i in range(0x60, 0x70):
+            self.global_device_address_input.addItem(f"0x{i:02X}", i)
+
+        # 添加特定设备选项
+        self.global_device_address_input.addItem("XL008", 0x6C)
+        self.global_device_address_input.addItem("XL006", 0x6A)
+
+        update_address_button = QPushButton('更新设备地址', self)
+        update_address_button.clicked.connect(self.update_global_device_address)
+
+        # 将这些控件添加到适当的布局中
+        global_control_layout = QHBoxLayout()
+        global_control_layout.addWidget(QLabel('全局设备地址:'))
+        global_control_layout.addWidget(self.global_device_address_input)
+        global_control_layout.addWidget(update_address_button)
+
+        # 将全局控制面板添加到主布局中
+        layout.addLayout(global_control_layout)
+        # self.setLayout(global_control_layout)
+        # self.setWindowTitle('设备地址设置')
+        # self.show()
+
 
         
         self.power_supply_control = PowerSupplyControl(self.devices)
@@ -72,10 +118,10 @@ class MainWindow(QWidget):
 
 
 
-        self.page1 = I2CConfigPage(self.devices)
-        self.page2 = I2CConfigPage(self.devices)
-        self.page3 = UpdateStatus()
-        self.excel_viewer_page = ExcelViewerPage()
+        self.page1 = I2CConfigPage(self.devices,self.global_usb_i2c,self.global_device_address)
+        self.page2 = I2CConfigPage(self.devices,self.global_usb_i2c,self.global_device_address)
+        self.page3 = UpdateStatus(self.global_usb_i2c,self.global_device_address)
+        self.excel_viewer_page = ExcelViewerPage(self.global_usb_i2c,self.global_device_address)
         self.aboutPage = AboutPage()
         #self.excel_viewer_page.resize(1200,800) 
 
@@ -117,41 +163,7 @@ class MainWindow(QWidget):
                 self.power_supply_control.setParent(None)
                 self.power_supply_control = None
 
-    # def auto_detect_devices(self):
-    #     devices = {}
-    #     resources = self.rm.list_resources()
-    #     self.timeout = 2  # 设置2秒超时
-    #     self.cache_file = 'device_cache.json'
-    #     self.cache_expiry = 3600  # 缓存有效期1小时
-        
-    #     for resource in resources:
-    #         try:
-    #             instr = self.rm.open_resource(resource)
-    #             try:
-    #                 idn = instr.query('*IDN?').strip().lower()
-    #                 if 'chroma' in idn:
-    #                     devices['PVDD_device'] = instr
-    #             except pyvisa.VisaIOError:
-    #                 pass
 
-    #             try:
-    #                 idn = instr.query('ID?').strip().lower()
-    #                 if 'hp6624a' in idn:
-    #                     devices['CH_device'] = instr
-    #             except pyvisa.VisaIOError:
-    #                 pass
-    #         except pyvisa.VisaIOError:
-    #             pass
-    #         # 如果未找到PVDD设备，设置为默认设备
-    #     if 'PVDD_device' not in devices:
-    #         #devices['PVDD_device'] = self.rm.open_resource('GPIB0::1::INSTR')
-    #         devices['PVDD_device'] = "default_pvdd_device"
-
-    #     # 如果未找到CH设备，设置为默认设备
-    #     if 'CH_device' not in devices:
-    #         #devices['CH_device'] =  self.rm.open_resource('GPIB0::25::INSTR')
-    #         devices['CH_device'] =  "default_ch_device"
-    #     return devices
     
 
     def auto_detect_devices(self):
@@ -236,6 +248,23 @@ class MainWindow(QWidget):
         except IOError:
             # 如果无法写入文件，我们就简单地忽略它
             pass
+    
+    def update_global_device_address(self):
+        try:
+            new_address = self.global_device_address_input.currentData()
+            #new_address = int(self.global_device_address_input.text(), 16)
+            self.global_device_address = new_address
+            self.global_usb_i2c.update_device_address(new_address)
+            #self.update_all_pages_device_address()
+            print(f'全局设备地址更新为: 0x{new_address:02X}')
+        except ValueError:
+            QMessageBox.critical(self, '错误', '无效的设备地址')
+
+    def update_all_pages_device_address(self):
+        # 更新所有页面的设备地址
+        self.page1.update_device_address(self.global_device_address)
+        self.page2.update_device_address(self.global_device_address)
+        pass
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)

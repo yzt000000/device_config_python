@@ -1,111 +1,87 @@
 {
     "0x01": {
         "bits": [
-            {"bit": 0, "name": "Bit 0 - 模式选择1", "messages": {"0": {"text": "模式选择1 - 模式A", "color": "blue"}, "1": {"text": "模式选择1 - 模式B", "color": "yellow"}}},
-            {"bit": 1, "name": "Bit 1 - 模式选择2", "messages": {"0": {"text": "模式选择2 - 模式C", "color": "purple"}, "1": {"text": "模式选择2 - 模式D", "color": "cyan"}}}
+            {"bit": 0, "name": "Bit 0 - 模式选择1", "messages": {"0": {"text": "模式选择1 - 模式A", "color": "blue", "size": "12px"}, "1": {"text": "模式选择1 - 模式B", "color": "red", "size": "24px"}}},
+            {"bit": 1, "name": "Bit 1 - 模式选择2", "messages": {"0": {"text": "模式选择2 - 模式C", "color": "purple", "size": "12px"}, "1": {"text": "模式选择2 - 模式D", "color": "cyan", "size": "24px"}}}
         ],
         "values": [
-            {"value": "0x0F", "name": "预设值 0x0F", "messages": "该值表示标准模式", "color": "green"},
-            {"value": "0xF0", "name": "预设值 0xF0", "messages": "该值表示错误模式", "color": "red"}
+            {"value": "0x0F", "name": "预设值 0x0F", "messages": "该值表示标准模式", "color": "green", "size": "16px"},
+            {"value": "0xF0", "name": "预设值 0xF0", "messages": "该值表示错误模式", "color": "red", "size": "16px"}
         ],
-        "calculation": "data + 5",
+        "calculation": {
+            "formula": "(data/256)*505.5 -272.5",
+            "print_format": "计算结果: {result} ℃",
+            "color": "blue",
+            "size": "14px"
+        },
         "bit_fields": [
             {"start_bit": 4, "length": 4, "name": "4-bit 位域", "values": [
-                {"value": "0x00", "name": "选项 0", "messages": "这是选项0的说明", "color": "gray"},
-                {"value": "0x01", "name": "选项 1", "messages": "这是选项1的说明", "color": "orange"},
-                {"value": "0x02", "name": "选项 2", "messages": "这是选项2的说明", "color": "lightblue"},
-                {"value": "0x03", "name": "选项 3", "messages": "这是选项3的说明", "color": "brown"},
-                {"value": "0x04", "name": "选项 4", "messages": "这是选项4的说明", "color": "purple"},
-                {"value": "0x05", "name": "选项 5", "messages": "这是选项5的说明", "color": "pink"},
-                {"value": "0x06", "name": "选项 6", "messages": "这是选项6的说明", "color": "red"},
-                {"value": "0x07", "name": "选项 7", "messages": "这是选项7的说明", "color": "blue"}
+                {"value": "0x00", "name": "选项 0", "messages": "这是选项0的说明", "color": "gray", "size": "12px"},
+                {"value": "0x01", "name": "选项 1", "messages": "这是选项1的说明", "color": "orange", "size": "22px"},
+                {"value": "0x02", "name": "选项 2", "messages": "这是选项2的说明", "color": "lightblue", "size": "12px"},
+                {"value": "0x03", "name": "选项 3", "messages": "这是选项3的说明", "color": "brown", "size": "22px"},
+                {"value": "0x04", "name": "选项 4", "messages": "这是选项4的说明", "color": "purple", "size": "22px"},
+                {"value": "0x05", "name": "选项 5", "messages": "这是选项5的说明", "color": "pink", "size": "12px"},
+                {"value": "0x06", "name": "选项 6", "messages": "这是选项6的说明", "color": "red", "size": "12px"},
+                {"value": "0x07", "name": "选项 7", "messages": "这是选项7的说明", "color": "blue", "size": "12px"}
             ]}
         ]
     },
     "0x02": {
         "bits": [
-            {"bit": 0, "name": "Bit 0 - 使能", "messages": {"0": {"text": "使能 - 禁用", "color": "red"}, "1": {"text": "使能 - 启用", "color": "green"}}},
-            {"bit": 1, "name": "Bit 1 - 工作状态", "messages": {"0": {"text": "工作状态 - 停止", "color": "gray"}, "1": {"text": "工作状态 - 运行", "color": "blue"}}}
+            {"bit": 0, "name": "Bit 0 - 模式选择1", "messages": {"0": {"text": "模式选择1 - 模式A", "color": "blue", "size": "12px"}, "1": {"text": "模式选择1 - 模式B", "color": "red", "size": "24px"}}},
+            {"bit": 1, "name": "Bit 1 - 模式选择2", "messages": {"0": {"text": "模式选择2 - 模式C", "color": "purple", "size": "12px"}, "1": {"text": "模式选择2 - 模式D", "color": "cyan", "size": "24px"}}}
         ],
         "values": [
-            {"value": "0x7F", "name": "预设值 0x7F", "messages": "该值表示正常运行", "color": "green"},
-            {"value": "0x80", "name": "预设值 0x80", "messages": "该值表示故障模式", "color": "red"}
+            {"value": "0x0F", "name": "预设值 0x0F", "messages": "该值表示标准模式", "color": "green", "size": "16px"},
+            {"value": "0xF0", "name": "预设值 0xF0", "messages": "该值表示错误模式", "color": "red", "size": "16px"}
         ],
-        "calculation": "data / 3",
+        "calculation": {
+            "formula": "(data/256)*505.5 -272.5",
+            "print_format": "计算结果: {result} ℃",
+            "color": "blue",
+            "size": "14px"
+        },
         "bit_fields": [
-            {"start_bit": 0, "length": 8, "name": "8-bit 位域", "values": [
-                {"value": "0x00", "name": "状态 0", "messages": "这是状态0的说明", "color": "gray"},
-                {"value": "0x01", "name": "状态 1", "messages": "这是状态1的说明", "color": "lightblue"},
-                {"value": "0x02", "name": "状态 2", "messages": "这是状态2的说明", "color": "lightgreen"},
-                {"value": "0x03", "name": "状态 3", "messages": "这是状态3的说明", "color": "yellow"},
-                {"value": "0x04", "name": "状态 4", "messages": "这是状态4的说明", "color": "purple"},
-                {"value": "0x05", "name": "状态 5", "messages": "这是状态5的说明", "color": "orange"},
-                {"value": "0x06", "name": "状态 6", "messages": "这是状态6的说明", "color": "cyan"},
-                {"value": "0x07", "name": "状态 7", "messages": "这是状态7的说明", "color": "red"}
+            {"start_bit": 4, "length": 4, "name": "4-bit 位域", "values": [
+                {"value": "0x00", "name": "选项 0", "messages": "这是选项0的说明", "color": "gray", "size": "12px"},
+                {"value": "0x01", "name": "选项 1", "messages": "这是选项1的说明", "color": "orange", "size": "22px"},
+                {"value": "0x02", "name": "选项 2", "messages": "这是选项2的说明", "color": "lightblue", "size": "12px"},
+                {"value": "0x03", "name": "选项 3", "messages": "这是选项3的说明", "color": "brown", "size": "22px"},
+                {"value": "0x04", "name": "选项 4", "messages": "这是选项4的说明", "color": "purple", "size": "22px"},
+                {"value": "0x05", "name": "选项 5", "messages": "这是选项5的说明", "color": "pink", "size": "12px"},
+                {"value": "0x06", "name": "选项 6", "messages": "这是选项6的说明", "color": "red", "size": "12px"},
+                {"value": "0x07", "name": "选项 7", "messages": "这是选项7的说明", "color": "blue", "size": "12px"}
             ]}
         ]
     },
     "0x03": {
         "bits": [
-            {"bit": 0, "name": "Bit 0 - 错误标志", "messages": {"0": {"text": "错误标志 - 无错误", "color": "green"}, "1": {"text": "错误标志 - 有错误", "color": "red"}}},
-            {"bit": 1, "name": "Bit 1 - 操作状态", "messages": {"0": {"text": "操作状态 - 空闲", "color": "blue"}, "1": {"text": "操作状态 - 活跃", "color": "yellow"}}}
+            {"bit": 0, "name": "Bit 0 - 模式选择1", "messages": {"0": {"text": "模式选择1 - 模式A", "color": "blue", "size": "12px"}, "1": {"text": "模式选择1 - 模式B", "color": "red", "size": "24px"}}},
+            {"bit": 1, "name": "Bit 1 - 模式选择2", "messages": {"0": {"text": "模式选择2 - 模式C", "color": "purple", "size": "12px"}, "1": {"text": "模式选择2 - 模式D", "color": "cyan", "size": "24px"}}}
         ],
         "values": [
-            {"value": "0x0A", "name": "预设值 0x0A", "messages": "该值表示正常状态", "color": "green"},
-            {"value": "0xF5", "name": "预设值 0xF5", "messages": "该值表示错误状态", "color": "red"}
+            {"value": "0x0F", "name": "预设值 0x0F", "messages": "该值表示标准模式", "color": "green", "size": "16px"},
+            {"value": "0xF0", "name": "预设值 0xF0", "messages": "该值表示错误模式", "color": "red", "size": "16px"}
         ],
-        "calculation": "data ^ 0xFF",
-        "bit_fields": [
-            {"start_bit": 0, "length": 3, "name": "3-bit 位域", "values": [
-                {"value": "0x00", "name": "选项 A", "messages": "这是选项A的说明", "color": "blue"},
-                {"value": "0x01", "name": "选项 B", "messages": "这是选项B的说明", "color": "green"},
-                {"value": "0x02", "name": "选项 C", "messages": "这是选项C的说明", "color": "yellow"},
-                {"value": "0x03", "name": "选项 D", "messages": "这是选项D的说明", "color": "orange"},
-                {"value": "0x04", "name": "选项 E", "messages": "这是选项E的说明", "color": "purple"}
-            ]}
-        ]
-    },
-    "0x04": {
-        "bits": [
-            {"bit": 0, "name": "Bit 0 - 校验状态", "messages": {"0": {"text": "校验状态 - 无错误", "color": "green"}, "1": {"text": "校验状态 - 有错误", "color": "red"}}},
-            {"bit": 1, "name": "Bit 1 - 温度状态", "messages": {"0": {"text": "温度状态 - 正常", "color": "blue"}, "1": {"text": "温度状态 - 高温", "color": "orange"}}}
-        ],
-        "values": [
-            {"value": "0x1F", "name": "预设值 0x1F", "messages": "该值表示正常运行", "color": "green"},
-            {"value": "0xE0", "name": "预设值 0xE0", "messages": "该值表示高温状态", "color": "red"}
-        ],
-        "calculation": "data & 0x7F",
-        "bit_fields": [
-            {"start_bit": 5, "length": 3, "name": "3-bit 位域", "values": [
-                {"value": "0x00", "name": "模式 0", "messages": "这是模式0的说明", "color": "gray"},
-                {"value": "0x01", "name": "模式 1", "messages": "这是模式1的说明", "color": "lightblue"},
-                {"value": "0x02", "name": "模式 2", "messages": "这是模式2的说明", "color": "lightgreen"},
-                {"value": "0x03", "name": "模式 3", "messages": "这是模式3的说明", "color": "yellow"},
-                {"value": "0x04", "name": "模式 4", "messages": "这是模式4的说明", "color": "orange"}
-            ]}
-        ]
-    },
-    "0x05": {
-        "bits": [
-            {"bit": 0, "name": "Bit 0 - 事件标志", "messages": {"0": {"text": "事件标志 - 无事件", "color": "gray"}, "1": {"text": "事件标志 - 有事件", "color": "red"}}},
-            {"bit": 1, "name": "Bit 1 - 计数器状态", "messages": {"0": {"text": "计数器状态 - 停止", "color": "blue"}, "1": {"text": "计数器状态 - 运行", "color": "green"}}}
-        ],
-        "values": [
-            {"value": "0x3C", "name": "预设值 0x3C", "messages": "该值表示正常运行", "color": "green"},
-            {"value": "0xC3", "name": "预设值 0xC3", "messages": "该值表示警告状态", "color": "yellow"}
-        ],
-        "calculation": "data << 1",
+        "calculation": {
+            "formula": "(data/256)*505.5 -272.5",
+            "print_format": "计算结果: {result} ℃",
+            "color": "blue",
+            "size": "14px"
+        },
         "bit_fields": [
             {"start_bit": 4, "length": 4, "name": "4-bit 位域", "values": [
-                {"value": "0x00", "name": "模式 A", "messages": "这是模式A的说明", "color": "blue"},
-                {"value": "0x01", "name": "模式 B", "messages": "这是模式B的说明", "color": "green"},
-                {"value": "0x02", "name": "模式 C", "messages": "这是模式C的说明", "color": "yellow"},
-                {"value": "0x03", "name": "模式 D", "messages": "这是模式D的说明", "color": "orange"},
-                {"value": "0x04", "name": "模式 E", "messages": "这是模式E的说明", "color": "purple"},
-                {"value": "0x05", "name": "模式 F", "messages": "这是模式F的说明", "color": "cyan"},
-                {"value": "0x06", "name": "模式 G", "messages": "这是模式G的说明", "color": "pink"},
-                {"value": "0x07", "name": "模式 H", "messages": "这是模式H的说明", "color": "red"}
+                {"value": "0x00", "name": "选项 0", "messages": "这是选项0的说明", "color": "gray", "size": "12px"},
+                {"value": "0x01", "name": "选项 1", "messages": "这是选项1的说明", "color": "orange", "size": "22px"},
+                {"value": "0x02", "name": "选项 2", "messages": "这是选项2的说明", "color": "lightblue", "size": "12px"},
+                {"value": "0x03", "name": "选项 3", "messages": "这是选项3的说明", "color": "brown", "size": "22px"},
+                {"value": "0x04", "name": "选项 4", "messages": "这是选项4的说明", "color": "purple", "size": "22px"},
+                {"value": "0x05", "name": "选项 5", "messages": "这是选项5的说明", "color": "pink", "size": "12px"},
+                {"value": "0x06", "name": "选项 6", "messages": "这是选项6的说明", "color": "red", "size": "12px"},
+                {"value": "0x07", "name": "选项 7", "messages": "这是选项7的说明", "color": "blue", "size": "12px"}
             ]}
         ]
     }
+
 }

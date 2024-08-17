@@ -1,3 +1,6 @@
+
+
+
 import sys
 import pandas as pd
 import math
@@ -8,21 +11,22 @@ from MiniMap import MiniMap
 
 from PyQt5.QtWidgets import (QApplication, QWidget, QVBoxLayout, QHBoxLayout, QTextEdit, QSizePolicy,
                              QPushButton, QLabel, QTreeWidget, QTreeWidgetItem, QScrollArea, QFormLayout,
-                             QInputDialog, QMessageBox, QLineEdit, QDialog, QComboBox)
+                             QInputDialog, QMessageBox, QLineEdit, QDialog, QComboBox, QFileDialog)
 from PyQt5.QtGui import QPainter, QColor, QFont , QCursor
 from PyQt5.QtCore import Qt, QTimer, QPoint, QRectF
 
 
 class ExcelViewerPage(QWidget):
-    def __init__(self):
+
+    def __init__(self, global_usb_i2c, global_device_address):
         super().__init__()
-        self.usb_i2c = USBI2C()
+        self.usb_i2c = global_usb_i2c
+        self.device_address = global_device_address  # Initialize with None
         self.current_page = 0
         self.current_lob = 0
         self.total_pages = 10
         self.setup_gui()
         self.desc_windows = []
-
 
     def setup_gui(self):
         self.setWindowTitle("Register Map")
@@ -30,22 +34,7 @@ class ExcelViewerPage(QWidget):
         main_layout = QVBoxLayout(self)
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
 
-
         form_layout = QFormLayout()
-
-        # Device address input and update button
-        self.device_address_input = QLineEdit(self)
-        self.device_address_input.setText("0x6c")
-        
-        update_address_button = QPushButton('更新设备地址', self)
-        update_address_button.clicked.connect(self.update_device_address)
-
-        device_address_layout = QHBoxLayout()
-        device_address_layout.addWidget(self.device_address_input)
-        device_address_layout.addWidget(update_address_button)
-        
-        # Add the device address row to the form layout
-        form_layout.addRow(QLabel('设备地址:'), device_address_layout)
 
         # Navigation Frame
         nav_frame = QWidget()
@@ -85,6 +74,12 @@ class ExcelViewerPage(QWidget):
         button_layout.addWidget(self.write_button)
         button_layout.addWidget(self.page_num_button)
         button_layout.addWidget(self.page_num_label)
+        
+        # Load File Button
+        self.load_file_button = QPushButton("Load File")
+        self.load_file_button.clicked.connect(self.load_file)
+        button_layout.addWidget(self.load_file_button)
+        
         main_layout.addWidget(button_frame)
 
         # Tree Widget and MiniMap Layout
@@ -112,6 +107,7 @@ class ExcelViewerPage(QWidget):
 
         main_layout.addLayout(tree_mini_map_layout)
 
+        self.load_dataframe('register_map_data.pkl')
         self.load_excel_data()
         self.display_current_page()
 
@@ -128,10 +124,7 @@ class ExcelViewerPage(QWidget):
             self.excel_data = pickle.load(f)
 
     def load_excel_data(self):
-        self.load_dataframe('register_map_data.pkl')
-        #file_path = './xl008_2p0_regmap.xlsx'
-        #self.excel_data = pd.read_excel(file_path)
-
+        #self.load_dataframe('register_map_data.pkl')
         self.registers_by_lob = {}
         
         for idx, row in self.excel_data.iterrows():
@@ -227,7 +220,6 @@ class ExcelViewerPage(QWidget):
             self.current_page -= 1
             self.display_current_page()
 
-
     def on_read(self):
         selected_items = self.tree.selectedItems()
         if selected_items:
@@ -262,51 +254,20 @@ class ExcelViewerPage(QWidget):
         addr = self.convert_address(addr)
         self.usb_i2c.write(int(addr, 16), int(value, 16))
 
-
     def convert_address(self, addr):
-        # 检查地址格式是否为 '8'hXX'
         if isinstance(addr, str):
             if addr.startswith("8'h"):
-                # 移除 '8'h' 前缀，并添加 '0x' 前缀
                 return "0x" + addr[3:]
-            # 如果已经是 '0xXX' 格式，直接返回
             elif addr.startswith("8‘h"):
                 return "0x" + addr[3:]
-            # 如果已经是 '0xXX' 格式，直接返回
             elif addr.startswith("0x"):
                 return addr
-            # 如果是纯数字，添加 '0x' 前缀
             else:
                 return "0x" + addr
-        # 如果是整数，转换为十六进制字符串
         elif isinstance(addr, int):
             return f"0x{addr:02X}"
         else:
             raise ValueError("Invalid address format")
-
-    # def show_description(self, item):
-    #     description = item.text(4)
-    #     if pd.isna(description):
-    #         description = "No description available"
-    #     desc_window = QDialog(self)
-    #     desc_window.setWindowTitle("Description")
-    #     layout = QVBoxLayout(desc_window)
-    #     text_edit = QLineEdit(description)
-    #     text_edit.setReadOnly(True)
-    #     layout.addWidget(text_edit)
-        
-    #     # 获取鼠标当前位置
-    #     cursor_pos = self.mapToGlobal(QPoint(0, 0))
-    #     desc_window.setGeometry(cursor_pos.x() + 10, cursor_pos.y() + 10, 400, 100)
-        
-    #     desc_window.show()
-    #     self.desc_windows.append(desc_window)
-    #     if len(self.desc_windows) > 2:
-    #         old_window = self.desc_windows.pop(0)
-    #         old_window.close()
-    
-
-
 
     def show_description(self, item):
         description = item.text(4)
@@ -321,8 +282,6 @@ class ExcelViewerPage(QWidget):
         text_edit.setReadOnly(True)
         layout.addWidget(text_edit)
         
-        # 获取鼠标当前位置
-        #cursor_pos = self.mapToGlobal(QPoint(0, 0))
         cursor_pos = QCursor.pos()
         desc_window.setGeometry(cursor_pos.x() + 10, cursor_pos.y() + 10, 400, 300)  # 设置初始大小
         
@@ -337,9 +296,6 @@ class ExcelViewerPage(QWidget):
             self.show_description(item)
         elif column == 2:  # Default Value column
             self.on_edit(item)
-
-
-    
 
     def on_edit(self, item):
         old_value = item.text(2)
@@ -464,11 +420,15 @@ class ExcelViewerPage(QWidget):
     def periodic_update(self):
         self.mini_map.update()
 
+    def load_file(self):
+        options = QFileDialog.Options()
+        file_path, _ = QFileDialog.getOpenFileName(self, "Open Register Map File", "", "Pickle Files (*.pkl);;All Files (*)", options=options)
+        if file_path:
+            try:
+                self.load_dataframe(file_path)
+                self.load_excel_data()
+                self.display_current_page()
+                QMessageBox.information(self, "File Loaded", f"File loaded successfully: {file_path}")
+            except Exception as e:
+                QMessageBox.critical(self, "Error", f"Failed to load file: {str(e)}")
 
-    def update_device_address(self):
-        try:
-            self.device_address = int(self.device_address_input.text(), 16)
-            #self.append_output(f'设备地址更新为: 0x{self.device_address:02X}\n')
-            self.usb_i2c.update_device_address(self.device_address)  # 调用usb_i2c的更新方法
-        except ValueError:
-            QMessageBox.critical(self, '错误', '无效的设备地址')

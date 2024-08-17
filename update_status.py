@@ -8,34 +8,30 @@ QGridLayout, QFormLayout, QTreeWidget, QTreeWidgetItem, QDialog, QComboBox
 from PyQt5.QtCore import Qt
 from usb_i2c import USBI2C
 class UpdateStatus(QWidget):
-    # def init(self):
-    #     super().init()
-    #     self.init_ui()
-    #     self.usb_i2c = USBI2C()
-    #     self.load_config('config.json')
-    def __init__(self):
+    def __init__(self,global_usb_i2c,global_device_address):
         super().__init__()
         self.init_ui()
-        self.usb_i2c = USBI2C()
+        self.usb_i2c = global_usb_i2c
+        self.device_address = global_device_address  # Initialize with None
         self.load_config('config.json')
 
     def init_ui(self):
         layout = QVBoxLayout()
         form_layout = QFormLayout()
 
-        # Device address input and update button
-        self.device_address_input = QLineEdit(self)
-        self.device_address_input.setText("0x6c")
+        # # Device address input and update button
+        # self.device_address_input = QLineEdit(self)
+        # self.device_address_input.setText("0x6c")
         
-        update_address_button = QPushButton('更新设备地址', self)
-        update_address_button.clicked.connect(self.update_device_address)
+        # update_address_button = QPushButton('更新设备地址', self)
+        # update_address_button.clicked.connect(self.update_device_address)
 
-        device_address_layout = QHBoxLayout()
-        device_address_layout.addWidget(self.device_address_input)
-        device_address_layout.addWidget(update_address_button)
+        # device_address_layout = QHBoxLayout()
+        # device_address_layout.addWidget(self.device_address_input)
+        # device_address_layout.addWidget(update_address_button)
         
-        # Add the device address row to the form layout
-        form_layout.addRow(QLabel('设备地址:'), device_address_layout)
+        # # Add the device address row to the form layout
+        # form_layout.addRow(QLabel('设备地址:'), device_address_layout)
 
         # Register address selection
         self.register_address_combo = QComboBox(self)
@@ -119,28 +115,27 @@ class UpdateStatus(QWidget):
             error_message = f'<span style="color: red;">更新状态失败: {str(e)}</span>'
             self.status_output.setHtml(error_message)
 
-
     def parse_status(self, data, register_config, register_address):
         status_text = f'<b>寄存器地址:</b> {register_address}: <b>寄存器值:</b> 0x{data:02X}<br/>'
 
         # 处理 bits
         if 'bits' in register_config:
-            status_text += '<b>Bits:</b><br/>'
+            #status_text += '<b>Bits:</b><br/>'
             for bit_info in register_config['bits']:
                 bit_value = (data >> bit_info['bit']) & 1
-                status_text += f"&nbsp;&nbsp;{bit_info['name']}: {bit_value}:     "
+                #status_text += f"&nbsp;&nbsp;{bit_info['name']}: {bit_value}:     "
                 if 'messages' in bit_info:
-                    message_info = bit_info['messages'].get(str(bit_value), {'text': '未知状态', 'color': 'black'})
-                    status_text += f"<span style='color: {message_info['color']};'>{message_info['text']}</span><br/>"
+                    message_info = bit_info['messages'].get(str(bit_value), {'text': '未知状态', 'color': 'black', 'size': '12px'})
+                    status_text += f"<span style='color: {message_info['color']}; font-size: {message_info['size']};'>{message_info['text']}</span><br/>"
 
         # 处理 values
         if 'values' in register_config:
             value_matched = False
             for value_info in register_config['values']:
                 if data == int(value_info['value'], 16):
-                    status_text += f"<b>匹配的值:</b> {value_info['name']}  "
+                    #status_text += f"<b>匹配的值:</b> {value_info['name']}  "
                     if 'messages' in value_info:
-                        status_text += f"<span style='color: {value_info.get('color', 'black')};'>详细信息: {value_info['messages']}</span><br/>"
+                        status_text += f"<span style='color: {value_info.get('color', 'black')}; font-size: {value_info.get('size', '12px')};'>详细信息: {value_info['messages']}</span><br/>"
                     value_matched = True
                     break
             if not value_matched:
@@ -149,14 +144,16 @@ class UpdateStatus(QWidget):
         # 处理 calculation
         if 'calculation' in register_config:
             try:
-                calculated_value = eval(register_config['calculation'].replace('data', str(data)))
-                status_text += f"<b>计算值:</b> {calculated_value}<br/>"
+                calc_config = register_config['calculation']
+                calculated_value = eval(calc_config['formula'].replace('data', str(data)))
+                formatted_result = calc_config['print_format'].format(result=calculated_value)
+                status_text += f"<span style='color: {calc_config.get('color', 'black')}; font-size: {calc_config.get('size', '12px')};'><b>计算结果:</b> {formatted_result}</span><br/>"
             except Exception as e:
                 status_text += f"<span style='color: red;'>计算错误:</span> {str(e)}<br/>"
 
         # 处理 bit_fields
         if 'bit_fields' in register_config:
-            status_text += '<b>Bit Fields:</b><br/>'
+            #status_text += '<b>Bit Fields:</b><br/>'
             for bit_field in register_config['bit_fields']:
                 field_value = (data >> bit_field['start_bit']) & ((1 << bit_field['length']) - 1)
                 
@@ -164,22 +161,26 @@ class UpdateStatus(QWidget):
                 
                 if matched_value:
                     field_name = matched_value['name']
-                    status_text += f"&nbsp;&nbsp;{bit_field['start_bit'] + bit_field['length'] - 1}:{bit_field['start_bit']} 位域: {field_name}:    "
+                    #status_text += f"&nbsp;&nbsp;{bit_field['start_bit'] + bit_field['length'] - 1}:{bit_field['start_bit']} 位域: {field_name}:    "
                     if 'messages' in matched_value:
                         color = matched_value.get('color', 'black')
-                        status_text += f"<span style='color: {color};'>{matched_value['messages']}</span><br/>"
+                        size = matched_value.get('size', '12px')
+                        status_text += f"<span style='color: {color}; font-size: {size};'>{matched_value['messages']}</span><br/>"
                 else:
                     status_text += f"&nbsp;&nbsp;{bit_field['start_bit'] + bit_field['length'] - 1}:{bit_field['start_bit']} 位域: <span style='color: red;'>未知值 (0x{field_value:02X})</span><br/>"
 
         return status_text
 
 
-  
-
+    # def read_i2c(self, register_address):
+    #     # 模拟读取I2C寄存器值
+    #     #return 0x55  # 替换为实际的I2C读取逻辑
+    #     return random.randint(0, 0xFF)
     def read_i2c(self, register_address):
-        # 模拟读取I2C寄存器值
-        #return 0x55  # 替换为实际的I2C读取逻辑
-        return random.randint(0, 0xFF)
+        if self.device_address is None:
+            raise ValueError('设备地址未设置')
+        #return self.usb_i2c.read_register(self.device_address, register_address)
+        return self.usb_i2c.read(register_address)
 
 
 
