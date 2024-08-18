@@ -29,10 +29,10 @@ class MainWindow(QWidget):
         #self.rm = pyvisa.ResourceManager('@sim')
 
          # 检查许可证
-        # checker = LicenseChecker()
-        # if not checker.check_license():
-        #     QMessageBox.critical(None, "License Error", "Invalid or expired license. Please contact support.")
-        #     return
+        checker = LicenseChecker()
+        if not checker.check_license():
+            QMessageBox.critical(None, "License Error", "Invalid or expired license. Please contact support.")
+            return
 
         # 如果许可证有效，继续运行程序
         
