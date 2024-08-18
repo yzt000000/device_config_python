@@ -1,5 +1,5 @@
 {
-    "0x01": {
+    "0x03": {
         "bits": [
             {"bit": 0, "name": "Bit 0 - 模式选择1", "messages": {"0": {"text": "模式选择1 - 模式A", "color": "blue", "size": "1px"}, "1": {"text": "模式选择1 - 模式B", "color": "red", "size": "24px"}}},
             {"bit": 1, "name": "Bit 1 - 模式选择2", "messages": {"0": {"text": "模式选择2 - 模式C", "color": "purple", "size": "1px"}, "1": {"text": "模式选择2 - 模式D", "color": "cyan", "size": "24px"}}}
@@ -37,7 +37,7 @@
             ]}
         ]
     },
-    "0x02": {
+    "0x04": {
         "bits": [
             {"bit": 0, "name": "Bit 0 - 模式选择1", "messages": {"0": {"text": "模式选择1 - 模式A", "color": "blue", "size": "12px"}, "1": {"text": "模式选择1 - 模式B", "color": "red", "size": "24px"}}},
             {"bit": 1, "name": "Bit 1 - 模式选择2", "messages": {"0": {"text": "模式选择2 - 模式C", "color": "purple", "size": "12px"}, "1": {"text": "模式选择2 - 模式D", "color": "cyan", "size": "24px"}}}
@@ -51,21 +51,9 @@
             "print_format": "计算结果: {result} ℃",
             "color": "blue",
             "size": "14px"
-        },
-        "bit_fields": [
-            {"start_bit": 4, "length": 4, "name": "4-bit 位域", "values": [
-                {"value": "0x00", "name": "选项 0", "messages": "这是选项0的说明", "color": "gray", "size": "12px"},
-                {"value": "0x01", "name": "选项 1", "messages": "这是选项1的说明", "color": "orange", "size": "22px"},
-                {"value": "0x02", "name": "选项 2", "messages": "这是选项2的说明", "color": "lightblue", "size": "12px"},
-                {"value": "0x03", "name": "选项 3", "messages": "这是选项3的说明", "color": "brown", "size": "22px"},
-                {"value": "0x04", "name": "选项 4", "messages": "这是选项4的说明", "color": "purple", "size": "22px"},
-                {"value": "0x05", "name": "选项 5", "messages": "这是选项5的说明", "color": "pink", "size": "12px"},
-                {"value": "0x06", "name": "选项 6", "messages": "这是选项6的说明", "color": "red", "size": "12px"},
-                {"value": "0x07", "name": "选项 7", "messages": "这是选项7的说明", "color": "blue", "size": "12px"}
-            ]}
-        ]
+        }
     },
-    "0x03": {
+    "0x05": {
         "bits": [
             {"bit": 0, "name": "Bit 0 - 模式选择1", "messages": {"0": {"text": "模式选择1 - 模式A", "color": "blue", "size": "12px"}, "1": {"text": "模式选择1 - 模式B", "color": "red", "size": "24px"}}},
             {"bit": 1, "name": "Bit 1 - 模式选择2", "messages": {"0": {"text": "模式选择2 - 模式C", "color": "purple", "size": "12px"}, "1": {"text": "模式选择2 - 模式D", "color": "cyan", "size": "24px"}}}
