@@ -56,7 +56,8 @@ class MeasurementThread(QThread):
 class PowerSupplyControl(QWidget):
     def __init__(self,devices):
         super().__init__()
-        self.instruments = devices
+        #self.instruments = devices
+        self.devices = devices
         #self.init_ui()
         self.initialized = False  # 添加一个标志来检查是否已经被初始化
 
@@ -67,6 +68,7 @@ class PowerSupplyControl(QWidget):
         self.initialized = True
         self.rm = pyvisa.ResourceManager()
         #self.instruments = self.auto_detect_devices()
+        self.instruments = self.open_devices(self.devices)
 
         self.layout = QVBoxLayout()
         self.power_controls = {
@@ -100,12 +102,23 @@ class PowerSupplyControl(QWidget):
         self.measurement_thread.measurement_signal.connect(self.update_measurements)
         self.measurement_thread.start()
 
+
+
+
+    def open_devices(self, device_config):
+        opened_devices = {}
+        for device_name, device_info in device_config.items():
+            # 提取 GPIB 地址
+            address = device_info.split(' at ')[1]
+            opened_devices[device_name] = self.rm.open_resource(address)
+        return opened_devices
+
     def check_power_status(self):
         for key, control in self.power_controls.items():
             device = self.instruments[control['device']]
             try:
                 if key == 'PVDD':
-                    device.write('*CLS')
+                    #device.write('*CLS')
                     try:
                         device.write('*CLS')
                         status = device.query('CONFigure:OUTPut?')

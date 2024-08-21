@@ -275,7 +275,7 @@ class UpdateStatus(QWidget):
         try:
             with open(config_file, 'r', encoding='utf-8') as file:
                 self.sequence_config = json.load(file)
-            QMessageBox.information(self, '成功', '序列配置文件加载成功')
+            #QMessageBox.information(self, '成功', '序列配置文件加载成功')
         except json.JSONDecodeError as e:
             QMessageBox.critical(self, '错误', f'JSON 解析错误: {str(e)}')
             self.sequence_config = {}
@@ -404,13 +404,41 @@ class UpdateStatus(QWidget):
 
         return status_text
 
-    def read_i2c(self, register_address):
-        return random.randint(0, 0xFF)
-        #return 0x00
+    # def read_i2c(self, register_address):
+    #     #return random.randint(0, 0xFF)
+    #     #return 0x00
+    #     value = 0
+    #     return f"0x{value:02X}"
+        
 
-    def write_i2c(self, register_address, data):
-        # 这里添加实际的 I2C 写操作逻辑
-        pass
+    # def write_i2c(self, register_address, data):
+    #     # 这里添加实际的 I2C 写操作逻辑
+    #     pass
+    def convert_address(self, addr):
+        if isinstance(addr, str):
+            if addr.startswith("8'h"):
+                return "0x" + addr[3:]
+            elif addr.startswith("8‘h"):
+                return "0x" + addr[3:]
+            elif addr.startswith("0x"):
+                return addr
+            else:
+                return "0x" + addr
+        elif isinstance(addr, int):
+            return f"0x{addr:02X}"
+        else:
+            raise ValueError("Invalid address format")
+
+    def read_i2c(self, addr):
+        addr = self.convert_address(addr)
+        value = self.usb_i2c.read(int(addr, 16))
+        #return f"0x{value:02X}"
+        return value
+
+    def write_i2c(self, addr, value):
+        addr = self.convert_address(addr)
+        #self.usb_i2c.write(int(addr, 16), int(value, 16))
+        self.usb_i2c.write(int(addr, 16), value)
 
     def write_status(self, register_address, write_config):
         try:
