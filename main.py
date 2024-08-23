@@ -270,8 +270,10 @@ class MainWindow(QWidget):
                         cache_data = json.loads(content)
                         if time.time() - cache_data.get('timestamp', 0) < self.cache_expiry:
                             return cache_data.get('devices')
-        except (json.JSONDecodeError, ValueError, KeyError, TypeError):
+        except (json.JSONDecodeError, ValueError, KeyError, TypeError) as e:
+            self.show_error_message(f"Error loading cache: {e}")
             # 如果发生任何错误（JSON 解码错误、键错误等），我们就忽略缓存
+            self.show_error_message(f"Error loading cache: {e}")
             pass
         
         # 如果出现任何问题，或缓存过期，就返回 None
@@ -285,9 +287,17 @@ class MainWindow(QWidget):
         try:
             with open(self.cache_file, 'w') as f:
                 json.dump(cache_data, f)
-        except IOError:
+        except IOError as e :
             # 如果无法写入文件，我们就简单地忽略它
-            pass
+            self.show_error_message(f"Error saving cache: {e}")
+            #pass
+    def show_error_message(self, message):
+        msg_box = QMessageBox()
+        msg_box.setIcon(QMessageBox.Critical)
+        msg_box.setText("Error")
+        msg_box.setInformativeText(message)
+        msg_box.setWindowTitle("Error")
+        msg_box.exec_()
     
     def update_global_device_address(self):
         try:
