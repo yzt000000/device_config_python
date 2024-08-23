@@ -7,8 +7,8 @@ from i2c_config_page import I2CConfigPage
 from update_status import  UpdateStatus
 from excel_viewer_page import ExcelViewerPage
 from output_redirector import OutputRedirector
-from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import QApplication, QStyleFactory, QScrollArea, QVBoxLayout, QWidget, QTabWidget, QCheckBox,QMessageBox,QLineEdit,QPushButton,QHBoxLayout,QLabel,QComboBox
+from PyQt5.QtCore import Qt,QTimer
+from PyQt5.QtWidgets import QApplication,QFileDialog, QStyleFactory, QScrollArea, QVBoxLayout, QWidget, QTabWidget, QCheckBox,QMessageBox,QLineEdit,QPushButton,QHBoxLayout,QLabel,QComboBox
 from power_switch import PowerSupplyControl  # 导入 PowerSupplyControl 类
 from about import AboutPage # 导入AboutPage 
 import pyvisa
@@ -28,11 +28,14 @@ class MainWindow(QWidget):
         self.global_device_address = 0x6C
         #self.rm = pyvisa.ResourceManager('@sim')
 
-         # 检查许可证
-        checker = LicenseChecker()
-        if not checker.check_license():
-            QMessageBox.critical(None, "License Error", "Invalid or expired license. Please contact support.")
-            return
+        # 检查许可证
+        # 初始化 LicenseChecker
+        self.checker = LicenseChecker()
+
+        # 初始化定时器，1分钟后开始第一次许可证检查
+        self.timer = QTimer(self)
+        self.timer.timeout.connect(self.initial_license_check)
+        self.timer.start(300000)  # 1分钟 (60000毫秒) 的等待时间
 
         # 如果许可证有效，继续运行程序
         
@@ -40,6 +43,7 @@ class MainWindow(QWidget):
         self.cache_file = 'device_cache.json'
         self.cache_expiry = 3600  # 缓存有效期1小时
         self.timeout = 2  # 设置2秒超时
+
         try:
             self.rm = pyvisa.ResourceManager()
         except:
@@ -53,28 +57,11 @@ class MainWindow(QWidget):
         self.init_ui()
 
 
-
     def init_ui(self):
         layout = QVBoxLayout()
         self.tab_widget = QTabWidget()
         self.resize(1200, 800)
 
-        # self.global_device_address_input = QLineEdit(self)
-        # self.global_device_address_input.setText(f"0x{self.global_device_address:02X}")
-        # self.global_device_address_input.setFixedWidth(50)
-        
-        # update_address_button = QPushButton('更新设备地址', self)
-        # update_address_button.clicked.connect(self.update_global_device_address)
-        
-        # # 将这些控件添加到适当的布局中
-        # global_control_layout = QHBoxLayout()
-        # global_control_layout.addWidget(QLabel('全局设备地址:'))
-        # global_control_layout.addWidget(self.global_device_address_input)
-        # global_control_layout.addWidget(update_address_button)
-        
-        # # 将全局控制面板添加到主布局中
-        # layout.addLayout(global_control_layout)
-    
         self.global_device_address_input = QComboBox(self)
         self.global_device_address_input.setFixedWidth(100)
         # 添加地址范围选项
@@ -88,42 +75,52 @@ class MainWindow(QWidget):
         update_address_button = QPushButton('更新设备地址', self)
         update_address_button.clicked.connect(self.update_global_device_address)
 
+        # 添加I2C速度下拉菜单
+        self.i2c_speed_input = QComboBox(self)
+        self.i2c_speed_input.setFixedWidth(100)
+        # 添加I2C速度选项
+        self.i2c_speed_input.addItem("20k", 0x00)
+        self.i2c_speed_input.addItem("100k", 0x01)
+        self.i2c_speed_input.addItem("400k", 0x02)
+        self.i2c_speed_input.addItem("750k", 0x03)
+
+        update_speed_button = QPushButton('更新I2C速度', self)
+        update_speed_button.clicked.connect(self.update_global_i2c_speed)
+
+        # 添加导入License文件按钮
+        import_license_button = QPushButton('导入License文件', self)
+        import_license_button.clicked.connect(self.import_license_file)
+
         # 将这些控件添加到适当的布局中
         global_control_layout = QHBoxLayout()
         global_control_layout.addWidget(QLabel('全局设备地址:'))
         global_control_layout.addWidget(self.global_device_address_input)
         global_control_layout.addWidget(update_address_button)
+        global_control_layout.addWidget(QLabel('I2C速度:'))
+        global_control_layout.addWidget(self.i2c_speed_input)
+        global_control_layout.addWidget(update_speed_button)
+        global_control_layout.addWidget(import_license_button)
 
         # 将全局控制面板添加到主布局中
         layout.addLayout(global_control_layout)
-        # self.setLayout(global_control_layout)
-        # self.setWindowTitle('设备地址设置')
-        # self.show()
 
-
-        
         self.power_supply_control = PowerSupplyControl(self.devices)
         self.page0 = QWidget()
         page0_layout = QVBoxLayout()
         # 添加开关控件（QCheckBox）
         self.page0_switch = QCheckBox("Enable Power Control")
         self.page0_switch.setChecked(False)  # 默认关闭
-        #self.page0_switch.setChecked(True)  # 默认关闭
         self.page0_switch.stateChanged.connect(self.toggle_page0)
 
         page0_layout.addWidget(self.page0_switch)
         page0_layout.addWidget(self.power_supply_control)
         self.page0.setLayout(page0_layout)
 
-
-
-
-        self.page1 = I2CConfigPage(self.devices,self.global_usb_i2c,self.global_device_address)
-        self.page2 = I2CConfigPage(self.devices,self.global_usb_i2c,self.global_device_address)
-        self.page3 = UpdateStatus(self.global_usb_i2c,self.global_device_address)
-        self.excel_viewer_page = ExcelViewerPage(self.global_usb_i2c,self.global_device_address)
+        self.page1 = I2CConfigPage(self.devices, self.global_usb_i2c, self.global_device_address)
+        self.page2 = I2CConfigPage(self.devices, self.global_usb_i2c, self.global_device_address)
+        self.page3 = UpdateStatus(self.global_usb_i2c, self.global_device_address)
+        self.excel_viewer_page = ExcelViewerPage(self.global_usb_i2c, self.global_device_address)
         self.aboutPage = AboutPage()
-        #self.excel_viewer_page.resize(1200,800) 
 
         # 使用 QScrollArea 包装 ExcelViewerPage
         scroll_area = QScrollArea()
@@ -134,20 +131,18 @@ class MainWindow(QWidget):
         self.tab_widget.addTab(self.page1, 'Main')
         self.tab_widget.addTab(self.page2, '临时脚本')
         self.tab_widget.addTab(self.page3, 'Update Status')
-
         self.tab_widget.addTab(self.excel_viewer_page, 'Excel 查看器')
         self.tab_widget.addTab(self.aboutPage, '软件说明')
 
         layout.addWidget(self.tab_widget)
         self.setLayout(layout)
-        self.setWindowTitle('I2C 配置工具')
+        self.setWindowTitle('Device Config Tool')
         self.show()
 
         self.output_redirector = OutputRedirector()
         self.output_redirector.outputWritten.connect(self.page1.append_output)
         self.output_redirector.outputWritten.connect(self.page2.append_output)
         sys.stdout = self.output_redirector
-
 
     def toggle_page0(self, state):
         if state == Qt.Checked:
@@ -163,8 +158,53 @@ class MainWindow(QWidget):
                 self.power_supply_control.setParent(None)
                 self.power_supply_control = None
 
+    def initial_license_check(self):
+        # 第一次许可证检查
+        self.timer.timeout.disconnect()  # 断开当前的信号连接
 
-    
+        is_valid, message = self.checker.check_license()
+        if not is_valid:
+            self.show_license_error(message)
+            return
+
+        # 如果许可证有效，但剩余时间小于1周，则显示警告
+        if self.is_license_expiring_soon():
+            self.show_license_warning(self.checker.get_time_remaining())
+
+        # 设定定时器，每5分钟检查一次许可证
+        self.timer.timeout.connect(self.start_license_checking)
+        self.timer.start(30000)  # 每5分钟检查一次许可证
+
+    def start_license_checking(self):
+        # 定时检查许可证
+        is_valid, message = self.checker.check_license()
+        if not is_valid:
+            self.show_license_error(message)
+        if self.is_license_expiring_soon():
+            self.show_license_warning(self.checker.get_time_remaining())
+
+    def show_license_error(self, message):
+        # 显示许可证错误的消息并退出应用程序
+        QMessageBox.critical(self, "License Error", message)
+        QApplication.quit()  # 退出应用程序
+
+    def show_license_warning(self, message):
+        # 显示许可证剩余时间不足一周的警告
+        QMessageBox.warning(self, "License Warning", message)
+
+    def is_license_expiring_soon(self):
+        """
+        检查许可证是否在一周内过期。
+        """
+        expiry_info = self.checker.get_time_remaining()
+        if "Time remaining" in expiry_info:
+            remaining_time_str = expiry_info.split("Time remaining: ")[-1].strip()
+            if "days" in remaining_time_str:
+                days = int(remaining_time_str.split()[0])
+                return days <= 1
+            else:
+                return True  # 如果剩余时间中没有包含 "days"，则认为时间还充足
+        return False
 
     def auto_detect_devices(self):
         # 检查缓存
@@ -252,13 +292,30 @@ class MainWindow(QWidget):
     def update_global_device_address(self):
         try:
             new_address = self.global_device_address_input.currentData()
-            #new_address = int(self.global_device_address_input.text(), 16)
             self.global_device_address = new_address
             self.global_usb_i2c.update_device_address(new_address)
-            #self.update_all_pages_device_address()
             print(f'全局设备地址更新为: 0x{new_address:02X}')
         except ValueError:
             QMessageBox.critical(self, '错误', '无效的设备地址')
+
+    def update_global_i2c_speed(self):
+        try:
+            new_speed = self.i2c_speed_input.currentData()
+            self.global_usb_i2c.update_device_speed(new_speed)
+            print(f'全局I2C速度更新为: 0x{new_speed:02X}')
+        except ValueError:
+            QMessageBox.critical(self, '错误', '无效的I2C速度')
+
+    def import_license_file(self):
+        options = QFileDialog.Options()
+        file_path, _ = QFileDialog.getOpenFileName(self, "选择License文件", "", "License Files (*.key);;All Files (*)", options=options)
+        if file_path:
+            try:
+                _,message = self.checker.load_license(file_path)
+                #QMessageBox.information(self, "成功", "License文件导入成功")
+                QMessageBox.information(self, "成功", message)
+            except Exception as e:
+                QMessageBox.critical(self, "错误", f"导入License文件失败: {str(e)}")
 
     def update_all_pages_device_address(self):
         # 更新所有页面的设备地址
