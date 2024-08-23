@@ -98,6 +98,8 @@ class LicenseChecker:
                 logging.error("License has expired.")
                 return False, self.get_time_remaining(expiry_date)
 
+            with open(self.license_file, 'wb') as f:
+                f.write(encrypted_data)
             time_left = expiry_date - datetime.now()
             logging.info(f"License is valid. {time_left} remaining.")
             return True, self.get_time_remaining(expiry_date)

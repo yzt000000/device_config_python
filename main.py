@@ -79,10 +79,10 @@ class MainWindow(QWidget):
         self.i2c_speed_input = QComboBox(self)
         self.i2c_speed_input.setFixedWidth(100)
         # 添加I2C速度选项
-        self.i2c_speed_input.addItem("20k", 0x00)
-        self.i2c_speed_input.addItem("100k", 0x01)
-        self.i2c_speed_input.addItem("400k", 0x02)
-        self.i2c_speed_input.addItem("750k", 0x03)
+        self.i2c_speed_input.addItem("40k", 0x00)
+        self.i2c_speed_input.addItem("200k", 0x01)
+        self.i2c_speed_input.addItem("500k", 0x02)
+        self.i2c_speed_input.addItem("800k", 0x03)
 
         update_speed_button = QPushButton('更新I2C速度', self)
         update_speed_button.clicked.connect(self.update_global_i2c_speed)
