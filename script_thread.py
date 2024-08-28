@@ -1,4 +1,3 @@
-
 from PyQt5.QtCore import QThread, pyqtSignal
 import sys
 import io
@@ -10,6 +9,7 @@ class ScriptThread(QThread):
     output = pyqtSignal(str)
     paused = pyqtSignal()
     resumed = pyqtSignal()
+    finished = pyqtSignal()
 
     def __init__(self, script, read_func, write_func, write_uart_func, power_switch_function):
         super().__init__()
@@ -23,9 +23,9 @@ class ScriptThread(QThread):
         self.pause_lock = threading.Lock()
         self.pause_cond = threading.Condition(self.pause_lock)
 
-
-    
     def run(self):
+        old_stdout = None  # 确保 old_stdout 变量在任何情况下都能被访问
+        new_stdout = None  # 确保 new_stdout 变量在任何情况下都能被访问
         try:
             globals_dict = {
                 'read_i2c': self.read_func,
@@ -33,8 +33,8 @@ class ScriptThread(QThread):
                 'write_uart': self.write_uart_func,
                 'power_control': self.power_switch_function,
                 'print': self.custom_print,
-                'time': time,  # Add time module for sleep function
-                'print_colored': self.print_colored  # Add print_colored function
+                'time': time  # Add time module for sleep function
+
             }
             locals_dict = {}
 
@@ -42,31 +42,28 @@ class ScriptThread(QThread):
             old_stdout = sys.stdout
             new_stdout = io.StringIO()
             sys.stdout = new_stdout
-            #self.output.emit(f"绑定的 toggle_power_test 方法: {exec_globals['toggle_power_test']}\n")
-            #exec(self.script, exec_globals)
+
             exec(self.script, globals_dict, locals_dict)
+        except SystemExit:
+            self.output.emit("脚本执行被用户终止\n")
         except Exception as e:
             error_msg = f'<span style="color: red;">Error: {str(e)}</span>'
             self.output.emit(error_msg)
         finally:
             # 恢复标准输出
-            sys.stdout = old_stdout
-            output = new_stdout.getvalue()
-            if output:
-                self.output.emit(output)
-
-
-
-
-
-    
+            if old_stdout is not None:
+                sys.stdout = old_stdout
+            if new_stdout is not None:
+                output = new_stdout.getvalue()
+                if output:
+                    self.output.emit(output)
+            self.finished.emit()
 
     def wrap_function(self, func):
         def wrapper(*args, **kwargs):
             self.check_pause()
             return func(*args, **kwargs)
         return wrapper
-
 
     def check_pause(self):
         if self.is_paused:
@@ -80,7 +77,6 @@ class ScriptThread(QThread):
                 self.resumed.emit()
         elif self.should_exit:
             raise SystemExit("脚本执行被用户终止")
-
 
     def custom_print(self, *args, **kwargs):
         self.check_pause()
@@ -101,50 +97,5 @@ class ScriptThread(QThread):
             self.should_exit = True
             self.is_paused = False
             self.pause_cond.notify_all()
-
-
-
-    def print_colored(self, text, color, background=None, style=None):
-        colors = {
-            'black': '30',
-            'red': '31',
-            'green': '32',
-            'yellow': '33',
-            'blue': '34',
-            'purple': '35',
-            'cyan': '36',
-            'white': '37'
-        }
-        
-        backgrounds = {
-            'black': '40',
-            'red': '41',
-            'green': '42',
-            'yellow': '43',
-            'blue': '44',
-            'purple': '45',
-            'cyan': '46',
-            'white': '47'
-        }
-        
-        styles = {
-            'default': '0',
-            'bold': '1',
-            'underline': '4',
-            'blink': '5',
-            'reverse': '7'
-        }
-        
-        color_code = colors.get(color, '37')
-        background_code = backgrounds.get(background, '')
-        style_code = styles.get(style, '0')
-        
-        if background_code:
-            background_code = ';' + background_code
-
-        formatted_text = f'\033[{style_code};{color_code}{background_code}m{text}\033[0m'
-        self.output.emit(formatted_text)
-
-
 
  
