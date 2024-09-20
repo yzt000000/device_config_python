@@ -35,26 +35,64 @@ class AboutPage(QWidget):
         # 内置函数
         python_code = """
 time.sleep(0.1)
+################# I2C #####################################
 read_i2c(0x00)
 write_i2c(0x01, 0xAA)
-power_control.set_slew_rate("PVDD", 10)       #10v/ms
-power_control.set_voltage("PVDD", 20.0)       #20V
-power_control.toggle_power_func("CH1","ON")   # power on
-power_control.toggle_power_func("CH2","OFF")  # power off
-power_control.set_max_voltage("PVDD",30.0)    # voltage limit 
-power_control.set_current("PVDD",1.0)         # set current limit to 1A
+read_i2c_disp(0x00)
+write_i2c_disp(0x01,0xAA)
+###############  UART #####################################
 
-#for loop , adjust PVDD
-for i in range(10):
-    power_control.set_slew_rate("PVDD", 1000)
-    time.sleep(5)
-    power_control.set_voltage("PVDD", 200)
+# 发送UART数据
+write_uart("48 65 6C 6C 6F 20 53 65 72 69 61 6C 20 50 6F 72 74 21")  # 发送 "Hello Serial Port!"
+write_uart("04 05 A5 00 A5 00 94 03")
 
-    time.sleep(5)
-    power_control.set_slew_rate("PVDD", 500)
-    time.sleep(5)
-    power_control.set_voltage("PVDD", 0)
-    time.sleep(5)
+# 读取UART数据
+received_data = read_uart(timeout=2, num_bytes=1024)  # 2秒超时，最多读取1024字节
+if received_data:
+    print(f"读取到的数据: {received_data}")
+#POWER
+
+
+# 使用循环发送和接收数据
+for i in range(5):
+    write_uart(f"4D 65 73 73 61 67 65 20 {i:02X}")  # 发送 "Message X"，其中X是循环计数
+    time.sleep(0.5)  # 等待0.5秒
+    received = uart_read(timeout=1)
+    if received:
+        print(f"循环 {i+1}: 接收到 {received}")
+    else:
+        print(f"循环 {i+1}: 未接收到数据")
+
+##################### 电源 ###############################
+# 开关电源
+open_devices.open_devices()
+power_control.toggle_power_func("CH1", "ON")   # 打开CH1
+power_control.toggle_power_func("CH2", "OFF")  # 关闭CH2
+
+# 设置最大电压
+power_control.set_max_voltage("PVDD", 30.0)    # 设置PVDD最大电压为30V
+
+# 设置电流保护和限制
+power_control.set_current_prot("PVDD", 10.0)   # 设置PVDD电流保护为10A
+power_control.set_current_limit("PVDD", 10.0)  # 设置PVDD电流限制为10A
+
+# 设置压摆率（斜率）
+power_control.set_slew_rate("PVDD", 10)        # 设置PVDD压摆率为10V/ms
+
+# 读取电压、电流和功率
+voltage = power_control.read_voltage("CH1")
+current = power_control.read_current("CH1")
+power = power_control.read_power("CH1")
+print(f"CH1 - 电压: {voltage}V, 电流: {current}A, 功率: {power}W")
+
+# 使用循环调整PVDD电压
+for voltage in range(0, 21, 5):
+    power_control.set_voltage("PVDD", voltage)
+    time.sleep(1)
+    measured_voltage = power_control.read_voltage("PVDD")
+    print(f"设置PVDD电压为{voltage}V，测量值为{measured_voltage}V")
+############################## Print ###########################################
+#Print
 # 绿色文本
 print('<span style="color: green;">这是一段绿色文本</span>')
 # 蓝色粗体文本

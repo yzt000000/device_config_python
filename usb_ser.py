@@ -30,4 +30,46 @@ class USB_UART():
             except serial.SerialException as e:
                 print(f"Error opening or using serial port: {e}")
         else:
-            print("No serial ports found.")              
+            print("No serial ports found.")
+
+    # def uart_read(self, timeout=1, num_bytes=1024):
+    #     if self.ports:
+    #         selected_port = self.ports[0].device
+    #         print(f"使用端口: {selected_port}")
+    #         try:
+    #             with serial.Serial(selected_port, baudrate=9600, timeout=timeout) as ser:
+    #                 data = ser.read(num_bytes)
+    #                 if data:
+    #                     hex_data = ' '.join([f'{byte:02X}' for byte in data])
+    #                     print(f"接收到的十六进制数据: {hex_data}")
+    #                     return hex_data
+    #                 else:
+    #                     print("未接收到数据")
+    #                     return None
+    #         except serial.SerialException as e:
+    #             print(f"打开或使用串口时出错: {e}")
+    #             return None
+    #     else:
+    #         print("未找到串口")
+    #         return None
+    
+    def uart_read(self, timeout=1, num_bytes=1024):
+        if not self.ports:
+            print("未找到串口")
+            return None
+
+        selected_port = self.ports[0].device
+        print(f"使用端口: {selected_port}")
+        try:
+            with serial.Serial(selected_port, baudrate=9600, timeout=timeout) as ser:
+                data = ser.read(num_bytes)
+                if data:
+                    hex_data = ' '.join([f'{byte:02X}' for byte in data])
+                    print(f"接收到的十六进制数据: {hex_data}")
+                    return hex_data
+                else:
+                    print("未接收到数据")
+                    return None
+        except serial.SerialException as e:
+            print(f"打开或使用串口时出错: {e}")
+            return None

@@ -13,8 +13,47 @@ from time import time
 
 from PyQt5.QtCore import QMutex, QMutexLocker
 
+# class MeasurementThread(QThread):
+#     measurement_signal = pyqtSignal(str, float, float, float)
+
+#     def __init__(self, instruments, power_controls):
+#         super().__init__()
+#         self.instruments = instruments
+#         self.power_controls = power_controls
+#         self.running = True
+
+#     def run(self):
+#         while self.running:
+#             for key, control in self.power_controls.items():
+#                 device = self.instruments[control['device']]
+
+#                 try:
+
+#                     # 模拟测量值，实际使用时替换为真实的测量命令
+#                     if key == 'PVDD':
+#                         measured_voltage = float(device.query('FETC:VOLT?'))
+#                         measured_current = float(device.query('FETC:CURR?'))
+#                     else:
+#                         channel = key[-1]
+#                         measured_voltage = float(device.query(f'VOUT? {channel}').replace('\n','').replace('\r',''))
+#                         measured_current = float(device.query(f'IOUT? {channel}').replace('\n','').replace('\r',''))
+#                     power = measured_voltage * measured_current
+#                     #power = measured_voltage * 1
+#                     self.measurement_signal.emit(key, measured_voltage, measured_current, power)
+#                 except pyvisa.VisaIOError:
+#                      # 处理设备访问错误
+#                      pass
+
+
+#             self.msleep(1000)  # 每秒更新一次测量值
+
+#     def stop(self):
+#         self.running = False
+#         self.wait()
+
 class MeasurementThread(QThread):
     measurement_signal = pyqtSignal(str, float, float, float)
+    power_status_signal = pyqtSignal(str, bool)
 
     def __init__(self, instruments, power_controls):
         super().__init__()
@@ -28,8 +67,19 @@ class MeasurementThread(QThread):
                 device = self.instruments[control['device']]
 
                 try:
+                    # Check power status
+                    if key == 'PVDD':
+                        device.write('*CLS')
+                        status = device.query('CONFigure:OUTPut?')
+                        power_on = 'ON' in status
+                    else:
+                        channel = key[-1]
+                        status = device.query(f'OUT? {channel}')
+                        power_on = '1' in status
 
-                    # 模拟测量值，实际使用时替换为真实的测量命令
+                    self.power_status_signal.emit(key, power_on)
+
+                    # Measure voltage, current, and power
                     if key == 'PVDD':
                         measured_voltage = float(device.query('FETC:VOLT?'))
                         measured_current = float(device.query('FETC:CURR?'))
@@ -38,14 +88,13 @@ class MeasurementThread(QThread):
                         measured_voltage = float(device.query(f'VOUT? {channel}').replace('\n','').replace('\r',''))
                         measured_current = float(device.query(f'IOUT? {channel}').replace('\n','').replace('\r',''))
                     power = measured_voltage * measured_current
-                    #power = measured_voltage * 1
                     self.measurement_signal.emit(key, measured_voltage, measured_current, power)
+
                 except pyvisa.VisaIOError:
-                     # 处理设备访问错误
-                     pass
+                    # Handle device access error
+                    pass
 
-
-            self.msleep(1000)  # 每秒更新一次测量值
+            self.msleep(1000)  # Update measurements and status every second
 
     def stop(self):
         self.running = False
@@ -98,8 +147,13 @@ class PowerSupplyControl(QWidget):
 
         self.check_power_status()  # 检查电源状态
 
+        # self.measurement_thread = MeasurementThread(self.instruments, self.power_controls)
+        # self.measurement_thread.measurement_signal.connect(self.update_measurements)
+        # self.measurement_thread.start()
+
         self.measurement_thread = MeasurementThread(self.instruments, self.power_controls)
         self.measurement_thread.measurement_signal.connect(self.update_measurements)
+        self.measurement_thread.power_status_signal.connect(self.update_power_status)
         self.measurement_thread.start()
 
 
@@ -112,35 +166,41 @@ class PowerSupplyControl(QWidget):
             address = device_info.split(' at ')[1]
             opened_devices[device_name] = self.rm.open_resource(address)
         return opened_devices
+    
+    def update_power_status(self, key, power_on):
+        button = self.power_controls[key]['button']
+        button.setChecked(power_on)
+        if power_on:
+            self.set_voltage(key, self.power_controls[key]['voltage_slider'].value())
 
-    def check_power_status(self):
-        for key, control in self.power_controls.items():
-            device = self.instruments[control['device']]
-            try:
-                if key == 'PVDD':
-                    #device.write('*CLS')
-                    try:
-                        device.write('*CLS')
-                        status = device.query('CONFigure:OUTPut?')
-                        if 'ON' in status:
-                            control['button'].setChecked(True)
-                            self.set_voltage(key, control['voltage_slider'].value())
-                    except pyvisa.VisaIOError:
-                        control['button'].setChecked(False)
-                        pass
-                else:
-                    try:
-                        channel = key[-1]
-                        status = device.query(f'OUT? {channel}')
-                        if '1' in status:
-                            control['button'].setChecked(True)
-                            self.set_voltage(key, control['voltage_slider'].value())
-                    except pyvisa.VisaIOError:
-                        control['button'].setChecked(False) 
-                        pass
-            except pyvisa.VisaIOError:
-                # 处理设备访问错误
-                pass
+    # def check_power_status(self):
+    #     for key, control in self.power_controls.items():
+    #         device = self.instruments[control['device']]
+    #         try:
+    #             if key == 'PVDD':
+    #                 #device.write('*CLS')
+    #                 try:
+    #                     device.write('*CLS')
+    #                     status = device.query('CONFigure:OUTPut?')
+    #                     if 'ON' in status:
+    #                         control['button'].setChecked(True)
+    #                         self.set_voltage(key, control['voltage_slider'].value())
+    #                 except pyvisa.VisaIOError:
+    #                     control['button'].setChecked(False)
+    #                     pass
+    #             else:
+    #                 try:
+    #                     channel = key[-1]
+    #                     status = device.query(f'OUT? {channel}')
+    #                     if '1' in status:
+    #                         control['button'].setChecked(True)
+    #                         self.set_voltage(key, control['voltage_slider'].value())
+    #                 except pyvisa.VisaIOError:
+    #                     control['button'].setChecked(False) 
+    #                     pass
+    #         except pyvisa.VisaIOError:
+    #             # 处理设备访问错误
+    #             pass
 
     
 

@@ -12,22 +12,17 @@ import numpy as np
 
 
 class power_switch_function():
-    def __init__(self,devices):
+    def __init__(self, devices):
         super().__init__()
-        self.instruments = devices
+        self.devices = devices
+        self.instruments = {}  # 初始化为空字典
         self.init_ui()
 
     def init_ui(self):
-        #self.rm = pyvisa.ResourceManager()
         try:
             self.rm = pyvisa.ResourceManager()
         except:
             self.rm = pyvisa.ResourceManager('@sim')
-        #self.instruments = self.auto_detect_devices()
-        #self.instruments = {
-        #    'PVDD_device': self.rm.open_resource('GPIB0::1::INSTR'),  # 替换为控制 PVDD 的设备的资源字符串
-        #    'CH_device'  : self.rm.open_resource('GPIB0::25::INSTR'),    # 替换为控制 CH1-CH4 的设备的资源字符串
-        #}
         self.power_controls = {
             'PVDD': {'button': None, 'voltage_slider': None, 'current_slider': None, 'voltage_label': None, 'current_label': None, 'default_voltage': 144, 'device': 'PVDD_device',
                      'measured_voltage': None, 'measured_current': None, 'power': None, 'max_voltage_input': None, 'slew_slider': None, 'slew_label': None},
@@ -41,28 +36,17 @@ class power_switch_function():
                     'measured_voltage': None, 'measured_current': None, 'power': None, 'max_voltage_input': None, 'slew_slider': None, 'slew_label': None},
         }
 
-    def auto_detect_devices(self):
-        devices = {}
-        resources = self.rm.list_resources()
-        for resource in resources:
+    def open_devices(self):
+        device_config = self.devices
+        opened_devices = {}
+        for device_name, device_info in device_config.items():
             try:
-                instr = self.rm.open_resource(resource)
-                try:
-                    idn = instr.query('*IDN?').strip().lower()
-                    if 'chroma' in idn:
-                        devices['PVDD_device'] = instr
-                except pyvisa.VisaIOError:
-                    pass
-
-                try:
-                    idn = instr.query('ID?').strip().lower()
-                    if 'hp6624a' in idn:
-                        devices['CH_device'] = instr
-                except pyvisa.VisaIOError:
-                    pass
-            except pyvisa.VisaIOError:
-                pass
-        return devices
+                address = device_info.split(' at ')[1]
+            except IndexError:
+                print(f"设备信息格式错误: {device_info}")
+                continue
+            opened_devices[device_name] = self.rm.open_resource(address)
+        self.instruments = opened_devices
 
     def toggle_power(self, key):
         device = self.instruments[self.power_controls[key]['device']]
@@ -172,3 +156,67 @@ class power_switch_function():
             else:
                 device.write(f'OUT {key[-1]},0')
         #self.set_voltage(key, self.power_controls[key]['voltage_slider'].value())
+
+    def set_current_prot(self, key, value):
+        device = self.instruments[self.power_controls[key]['device']]
+        current = value 
+        if key == 'PVDD':
+            # PVDD 的电流设置命令
+            device.write( f'SOUR:CURR:PROT:HIGH {current}')
+            #device.write( f'SOUR:CURR:LIMIT:HIGH {current}')
+            #device.write( f'SOUR:CURR {current}')
+            pass
+        else:
+            pass
+            # CH1-CH4 的电流设置命令
+            #device.write(f'CURR {key[-1]},{current}')
+            device.write(f'OCP {key[-1]},1')
+
+    def set_current_limit(self, key, value):
+        device = self.instruments[self.power_controls[key]['device']]
+        current = value 
+        if key == 'PVDD':
+            # PVDD 的电流设置命令
+            #device.write( f'SOUR:CURR:PROT:HIGH {current}')
+            device.write( f'SOUR:CURR:LIMIT:HIGH {current}')
+            #device.write( f'SOUR:CURR {current}')
+            pass
+        else:
+            pass
+            # CH1-CH4 的电流设置命令
+            #device.write(f'CURR {key[-1]},{current}')
+            device.write(f'OCP {key[-1]},1')
+
+    def read_voltage(self, key):
+        device = self.instruments[self.power_controls[key]['device']]
+        try:
+            if key == 'PVDD':
+                measured_voltage = float(device.query('FETC:VOLT?'))
+            else:
+                channel = key[-1]
+                measured_voltage = float(device.query(f'VOUT? {channel}').replace('\n','').replace('\r',''))
+            return measured_voltage
+        except pyvisa.VisaIOError:
+            print(f"读取{key}电压时发生错误")
+            return None
+
+    def read_current(self, key):
+        device = self.instruments[self.power_controls[key]['device']]
+        try:
+            if key == 'PVDD':
+                measured_current = float(device.query('FETC:CURR?'))
+            else:
+                channel = key[-1]
+                measured_current = float(device.query(f'IOUT? {channel}').replace('\n','').replace('\r',''))
+            return measured_current
+        except pyvisa.VisaIOError:
+            print(f"读取{key}电流时发生错误")
+            return None
+
+    def read_power(self, key):
+        voltage = self.read_voltage(key)
+        current = self.read_current(key)
+        if voltage is not None and current is not None:
+            return voltage * current
+        else:
+            return None

@@ -11,12 +11,15 @@ class ScriptThread(QThread):
     resumed = pyqtSignal()
     finished = pyqtSignal()
 
-    def __init__(self, script, read_func, write_func, write_uart_func, power_switch_function):
+    def __init__(self, script, read_func, write_func,power_switch_function,uart_read_func,uart_write_func,i2c_read_disp_func,i2c_write_disp_func):
         super().__init__()
         self.script = script
         self.read_func = self.wrap_function(read_func)
         self.write_func = self.wrap_function(write_func)
-        self.write_uart_func = self.wrap_function(write_uart_func)
+        self.uart_write_func = self.wrap_function(uart_write_func)
+        self.uart_read_func = self.wrap_function(uart_read_func)
+        self.i2c_read_disp_func = self.wrap_function(i2c_read_disp_func)
+        self.i2c_write_disp_func = self.wrap_function(i2c_write_disp_func)
         self.power_switch_function = power_switch_function
         self.is_paused = False
         self.should_exit = False
@@ -30,7 +33,10 @@ class ScriptThread(QThread):
             globals_dict = {
                 'read_i2c': self.read_func,
                 'write_i2c': self.write_func,
-                'write_uart': self.write_uart_func,
+                'write_uart': self.uart_write_func,
+                'read_uart': self.uart_read_func,
+                'read_i2c_disp' : self.i2c_read_disp_func,
+                'write_i2c_disp' : self.i2c_write_disp_func,
                 'power_control': self.power_switch_function,
                 'print': self.custom_print,
                 'time': time  # Add time module for sleep function
