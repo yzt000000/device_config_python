@@ -1,4 +1,4 @@
-from PyQt5.QtCore import pyqtSignal, QObject, Qt, QRect, QSize, QRegularExpression, QThread, QProcess
+from PyQt5.QtCore import pyqtSignal, QObject, Qt, QRect, QSize, QRegularExpression, QThread, QProcess, QMetaObject, pyqtSlot
 from PyQt5.QtGui import QPainter, QColor, QFont, QTextCursor, QSyntaxHighlighter, QTextCharFormat, QTextFormat
 from usb_i2c import USBI2C
 from usb_ser import USB_UART
@@ -166,20 +166,41 @@ class I2CConfigPage(QWidget):
         elif self.script_button_state == ScriptButtonState.RESUME:
             self.resume_script()
 
+    # def execute_script(self):
+    #     script = self.script_input.toPlainText()
+    #     self.script_thread = ScriptThread(script, self.read_i2c, self.write_i2c, self.power_switch_function,self.read_uart,self.write_uart, self.read_i2c_disp,self.write_i2c_disp)
+    #     self.script_thread.output.connect(self.append_output)
+    #     self.script_thread.finished.connect(self.on_script_finished)
+    #     self.script_thread.paused.connect(self.on_script_paused)
+    #     self.script_thread.resumed.connect(self.on_script_resumed)
+    #     self.script_thread.start()
+
+    #     self.script_button_state = ScriptButtonState.INTERRUPT
+    #     self.script_button.setText('中断脚本')
+    #     self.status_label.setText('脚本状态: 运行中')
+    #     self.status_label.setStyleSheet("background-color: rgb(144, 238, 144);")
+    #     self.exit_button.setEnabled(True)
+
+
     def execute_script(self):
         script = self.script_input.toPlainText()
-        self.script_thread = ScriptThread(script, self.read_i2c, self.write_i2c, self.power_switch_function,self.read_uart,self.write_uart, self.read_i2c_disp,self.write_i2c_disp)
+        self.script_thread = ScriptThread(script, self.read_i2c, self.write_i2c, self.power_switch_function, self.read_uart, self.write_uart, self.read_i2c_disp, self.write_i2c_disp)
         self.script_thread.output.connect(self.append_output)
         self.script_thread.finished.connect(self.on_script_finished)
         self.script_thread.paused.connect(self.on_script_paused)
         self.script_thread.resumed.connect(self.on_script_resumed)
         self.script_thread.start()
 
+        # 使用 QMetaObject.invokeMethod 将 UI 更新操作调度到主线程
+        QMetaObject.invokeMethod(self, "update_ui_for_script_running", Qt.QueuedConnection)
+    @pyqtSlot()
+    def update_ui_for_script_running(self):
         self.script_button_state = ScriptButtonState.INTERRUPT
         self.script_button.setText('中断脚本')
         self.status_label.setText('脚本状态: 运行中')
         self.status_label.setStyleSheet("background-color: rgb(144, 238, 144);")
         self.exit_button.setEnabled(True)
+
 
     def interrupt_script(self):
         if self.script_thread and self.script_thread.isRunning():
@@ -349,6 +370,8 @@ class I2CConfigPage(QWidget):
     def write_uart(self,hex_string):
         try:
             self.usb_uart.uart_write(hex_string)
+            #self.append_output(f'UART 写入 {hex_string:02X}\n')
+            self.append_output(f"UART 写入: {hex_string}\n")
         except ValueError:
             QMessageBox.critical(self, '错误', '无法配置UART')
 
@@ -356,7 +379,13 @@ class I2CConfigPage(QWidget):
         try:
             data = self.usb_uart.uart_read(timeout=timeout, num_bytes=num_bytes)
             if data is None:
-                QMessageBox.warning(self, '警告', '未接收到数据')
+                #QMessageBox.warning(self, '警告', '未接收到数据')
+                self.append_output(f'警告 :未接收到数据')
+            else:
+                #hex_data = ' '.join([f'{byte:02X}' for byte in data])
+                #print(f"接收到的十六进制数据: {hex_data}")
+                self.append_output(f'接收到的十六进制数据: {data}\n')
+
             return data
         except Exception as e:
             QMessageBox.critical(self, '错误', f'读取UART时发生错误: {str(e)}')

@@ -145,7 +145,7 @@ class PowerSupplyControl(QWidget):
         self.setLayout(self.layout)
         self.setWindowTitle('Power Supply Control')
 
-        self.check_power_status()  # 检查电源状态
+        #self.check_power_status()  # 检查电源状态
 
         # self.measurement_thread = MeasurementThread(self.instruments, self.power_controls)
         # self.measurement_thread.measurement_signal.connect(self.update_measurements)

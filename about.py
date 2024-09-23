@@ -45,6 +45,7 @@ write_i2c_disp(0x01,0xAA)
 # 发送UART数据
 write_uart("48 65 6C 6C 6F 20 53 65 72 69 61 6C 20 50 6F 72 74 21")  # 发送 "Hello Serial Port!"
 write_uart("04 05 A5 00 A5 00 94 03")
+write_uart("01 05 A5 00 A5 00 94 56")
 
 # 读取UART数据
 received_data = read_uart(timeout=2, num_bytes=1024)  # 2秒超时，最多读取1024字节
