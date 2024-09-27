@@ -369,11 +369,13 @@ class I2CConfigPage(QWidget):
     
     def write_uart(self,hex_string):
         try:
-            self.usb_uart.uart_write(hex_string)
-            #self.append_output(f'UART 写入 {hex_string:02X}\n')
+            rd_hex = self.usb_uart.uart_write(hex_string)
             self.append_output(f"UART 写入: {hex_string}\n")
+            self.append_output(f"UART 返回: {rd_hex}\n")
+            return rd_hex
         except ValueError:
             QMessageBox.critical(self, '错误', '无法配置UART')
+            return None
 
     def read_uart(self, timeout=1, num_bytes=1024):
         try:

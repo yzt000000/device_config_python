@@ -25,6 +25,11 @@ class USB_UART():
                 # 发送16进制字符串
                 ser.write(hex_bytes)
                 #print(f"Sent hex message: {hex_string}")
+                data = ser.read(128)
+                if data:
+                    hex_data = ' '.join([f'{byte:02X}' for byte in data])
+                    #print(f"接收到的十六进制数据: {hex_data}")
+                    return hex_data
                 # 关闭串口
                 ser.close()
             except serial.SerialException as e:

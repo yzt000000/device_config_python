@@ -43,9 +43,9 @@ write_i2c_disp(0x01,0xAA)
 ###############  UART #####################################
 
 # 发送UART数据
-write_uart("48 65 6C 6C 6F 20 53 65 72 69 61 6C 20 50 6F 72 74 21")  # 发送 "Hello Serial Port!"
-write_uart("04 05 A5 00 A5 00 94 03")
-write_uart("01 05 A5 00 A5 00 94 56")
+data = write_uart("48 65 6C 6C 6F 20 53 65 72 69 61 6C 20 50 6F 72 74 21")  # 发送 "Hello Serial Port!"
+data = write_uart("04 05 A5 00 A5 00 94 03")
+data = write_uart("01 05 A5 00 A5 00 94 56")
 
 # 读取UART数据
 received_data = read_uart(timeout=2, num_bytes=1024)  # 2秒超时，最多读取1024字节
@@ -92,6 +92,119 @@ for voltage in range(0, 21, 5):
     time.sleep(1)
     measured_voltage = power_control.read_voltage("PVDD")
     print(f"设置PVDD电压为{voltage}V，测量值为{measured_voltage}V")
+############################## APX #############################################
+import sys, clr  #导入库
+
+clr.AddReference("System.Drawing")              
+clr.AddReference("System.Windows.Forms")
+# Add a reference to the APx API        
+clr.AddReference(r"C:\Program Files\Audio Precision\APx500 4.5\API\AudioPrecision.API2.dll")    #AP路径
+clr.AddReference(r"C:\Program Files\Audio Precision\APx500 4.5\API\AudioPrecision.API.dll") 
+
+from AudioPrecision.API import *    #导入API
+from System.Drawing import Point
+from System.Windows.Forms import Application, Button, Form, Label
+from System.IO import Directory, Path
+
+APx = APx500_Application()  #启动AP
+APx.Visible = True  #可视化，打开软件页面
+
+APx.OperatingMode = APxOperatingMode.BenchMode;   #切换模式
+#APx.OperatingMode = APxOperatingMode.SequenceMode;   #切换模式
+
+APx.BenchMode.Setup.OutputConnector.Type = OutputConnectorType.DigitalSerial #切换输出类型  DigitalSerial/DigitalOptical/AnalogBalanced等
+
+############ SerialDigitalTransmitter #########
+APx.BenchMode.Setup.SerialDigitalTransmitter.Format = SerialFormat.Custom #输出格式切换至Custom
+APx.BenchMode.Setup.SerialDigitalTransmitter.BitClkSendEdgeSync = EdgeSync.FallingEdge  #Bclock 下降沿对齐
+#APx.BenchMode.Setup.SerialDigitalTransmitter.BitClkSendEdgeSync = EdgeSync.RisingEdge  #Bclock 上升沿对齐
+APx.BenchMode.Setup.SerialDigitalTransmitter.BitDepth = 24  #有效位
+#APx.BenchMode.Setup.SerialDigitalTransmitter.Dither = False #dither 开关  =True 打开
+APx.BenchMode.Setup.SerialDigitalTransmitter.BitFrameClockDirection = ClockDirection.Out #
+APx.BenchMode.Setup.SerialDigitalTransmitter.Channels = SerialChannels.Eight  #输出通道数量
+APx.BenchMode.Setup.SerialDigitalTransmitter.DataJustification = SerialCustomDataJustification.LeftJustified #对齐方式
+#APx.BenchMode.Setup.SerialDigitalTransmitter.Format = SerialFormat.I2S #输出格式切换I2S
+APx.BenchMode.Setup.SerialDigitalTransmitter.FrameClockInvert = False #FrameClockInvert开
+APx.BenchMode.Setup.SerialDigitalTransmitter.FrameClockLeftOneBit  = True #空一位对齐
+APx.BenchMode.Setup.SerialDigitalTransmitter.FrameClockPulseWidth = FrameClockPulseWidth.OneBitClock #Fclock宽度
+APx.BenchMode.Setup.SerialDigitalTransmitter.InvertMasterClock = False #Mclock翻转开关
+APx.BenchMode.Setup.SerialDigitalTransmitter.LogicLevel = SerialLogicLevel.V3p3 #逻辑电平值 支持1.8 2.5 3.3
+APx.BenchMode.Setup.SerialDigitalTransmitter.MasterClockMultiplier = 256  #Mclk/Fclk  ratio
+APx.BenchMode.Setup.SerialDigitalTransmitter.MasterClockOff = False #mclk开关
+APx.BenchMode.Setup.SerialDigitalTransmitter.MasterClockSource = MasterClockSource.Internal #mclk源自内部外部
+APx.BenchMode.Setup.SerialDigitalTransmitter.MsbFirst = True
+APx.BenchMode.Setup.SerialDigitalTransmitter.SampleRate.Value = 48000  #输出采样率
+APx.BenchMode.Setup.SerialDigitalTransmitter.SingleDataLine = True  #single data line  即TDM
+APx.BenchMode.Setup.SerialDigitalTransmitter.WordWidth = 32  #位宽
+APx.BenchMode.Setup.SerialDigitalTransmitter.EnableOutputs = True #打开SerialDigital输出
+
+APx.BenchMode.Setup.InputConnector.Type = InputConnectorType.AnalogBalanced    #切换输入类型
+APx.BenchMode.Setup.AnalogInput.ChannelCount = 2 #输入通道数量
+
+########## HIGH PASS FILTER ##################
+APx.BenchMode.Setup.HighpassFilter = HighpassFilterMode.Butterworth #高通滤波器类型
+#APx.BenchMode.Setup.HighpassFilter = HighpassFilterMode.AC
+APx.BenchMode.Setup.HighpassFilterFrequency = 10   #高通滤波器频率
+
+########## LOW PASS FILTER ##################
+APx.BenchMode.Setup.LowpassFilterAnalog = LowpassFilterModeAnalog.Butterworth #低通滤波器类型
+APx.BenchMode.Setup.LowpassFilterFrequencyAnalog = 22400 #低通滤波器频率
+
+########## Weighting type ##################
+#APx.BenchMode.Setup.WeightingFilter = SignalPathWeightingFilterType.wt_None 
+#APx.BenchMode.Setup.WeightingFilter = SignalPathWeightingFilterType.wt_A
+#APx.BenchMode.Setup.WeightingFilter = SignalPathWeightingFilterType.wt_Deemph50us
+
+######### References ################
+#APx.BenchMode.Setup.References.AnalogInputReferences.dBrA.Value #设置dBrA的值
+APx.BenchMode.Setup.References.AnalogInputReferences.Watts.Value = 4  #设置负载阻值
+
+########## switcher ##############
+APx.BenchMode.Setup.UseInputSwitcher = True #enable switcher
+#APx.BenchMode.Setup.UseInputSwitcher = False #disable switcher
+APx.BenchMode.Setup.InputSwitcherConfiguration.SetChannelA(SwitcherAddress.Switcher0, SwitcherChannelSelection.Ch1)
+#APx.BenchMode.Setup.InputSwitcherConfiguration.SetChannelA(SwitcherAddress.Switcher0, SwitcherChannelSelection.Ch2)
+#APx.BenchMode.Setup.InputSwitcherConfiguration.SetChannelA(SwitcherAddress.Switcher0, SwitcherChannelSelection.Ch3)
+#APx.BenchMode.Setup.InputSwitcherConfiguration.SetChannelA(SwitcherAddress.Switcher0, SwitcherChannelSelection.Ch4)  #Switcher切换CHA
+
+#APx.BenchMode.Setup.InputSwitcherConfiguration.SetChannelB(SwitcherAddress.Switcher0, SwitcherChannelSelection.Ch1)
+#APx.BenchMode.Setup.InputSwitcherConfiguration.SetChannelB(SwitcherAddress.Switcher0, SwitcherChannelSelection.Ch2)
+APx.BenchMode.Setup.InputSwitcherConfiguration.SetChannelB(SwitcherAddress.Switcher0, SwitcherChannelSelection.Ch3)
+#APx.BenchMode.Setup.InputSwitcherConfiguration.SetChannelB(SwitcherAddress.Switcher0, SwitcherChannelSelection.Ch4)  #Switcher切换CHB
+
+######### Generator ##############
+APx.BenchMode.Generator.AutoOn = True #AutoOn 开关
+APx.BenchMode.Generator.Frequency.Value = 1000 #频率设置
+APx.BenchMode.Generator.Waveform = 'Sine'  #更改波形
+### IMD ###
+#APx.BenchMode.Generator.Imd.Frequency1.Value = 60  #F1
+#APx.BenchMode.Generator.Imd.Frequency2.Value = 7000  #F2
+#APx.BenchMode.Generator.Imd.SignalType = ImdGeneratorSignalType.Smpte4To1  #信号类型
+#APx.BenchMode.Generator.Imd.Split = False # split 关
+###########
+APx.BenchMode.Generator.Levels.Unit = 'dBFS'  #单位
+APx.BenchMode.Generator.Levels.TrackFirstChannel = True  #跟随一通道
+APx.BenchMode.Generator.Levels.SetValue(OutputChannelIndex.Ch1, -20)   #改变输出幅度
+#APx.BenchMode.Generator.On = True   #输出开启
+
+##############  sweep  ####################
+APx.BenchMode.Measurements.SteppedSweep.Append = True  #append graph data开
+APx.BenchMode.Measurements.SteppedSweep.Repeat = False  #  repeat开关
+APx.BenchMode.Measurements.SteppedSweep.Source = SweepSourceParameterType.GeneratorFrequency #扫频
+APx.BenchMode.Measurements.SteppedSweep.SourceParameters.Start.Value = 20000 #开始频率
+APx.BenchMode.Measurements.SteppedSweep.SourceParameters.Stop.Value = 20  # 结束频率
+#APx.BenchMode.Measurements.SteppedSweep.SourceParameters.StepSize.Value
+APx.BenchMode.Measurements.SteppedSweep.SourceParameters.NumberOfPoints = 51  #point数量
+APx.BenchMode.Measurements.SteppedSweep.Graphs.Add('THD+NRatio').Result  #增加测试项
+#APx.BenchMode.Measurements.SteppedSweep.Graphs.Delete('Gain')   #删除测试项
+#APx.BenchMode.Measurements.SteppedSweep.ClearData() #清除所有测试数据
+#APx.BenchMode.Measurements.SteppedSweep.ClearData(SourceDataType.Measured, dataIndex=1) #清除某一个测试数据
+#APx.BenchMode.Measurements.SteppedSweep.ExportData('test1', NumberOfGraphPoints.GraphPointsSameAsGraph, appendIfExists)  #导出数据
+#APx.BenchMode.Measurements.SteppedSweep.ExportData('test1',) #导出数据
+APx.BenchMode.Measurements.SteppedSweep.Start() #测试开始
+#APx.BenchMode.Measurements.SteppedSweep.Stop()  #测试中断
+#APx.BenchMode.Measurements.SteppedSweep.Source = SweepSourceParameterType.GeneratorLevel
+#APx.BenchMode.Measurements.SteppedSweep.SourceParameters.Start.Value
 ############################## Print ###########################################
 #Print
 # 绿色文本
