@@ -2,7 +2,7 @@ import sys
 import random
 import logging
 import json
-from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QGroupBox, QPushButton, QSlider, QLabel, QLineEdit, QSizePolicy, QGridLayout
+from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QGroupBox, QPushButton, QSlider, QLabel, QLineEdit, QSizePolicy, QGridLayout,QComboBox
 from PyQt5.QtCore import Qt, QTimer, QThread, pyqtSignal,QObject
 import pyvisa
 import matplotlib.pyplot as plt
@@ -175,6 +175,9 @@ class PowerSupplyControl(QWidget):
                     'measured_voltage': None, 'measured_current': None, 'power': None, 'max_voltage_input': None, 'slew_slider': None, 'slew_label': None, 'default_max_voltage': 3.3, 'max_current_input': None, 'default_max_current': 60.0, 'default_current': 600},
         }
 
+        # Add control panel for measurement
+        control_group = self.create_measurement_control_group()
+        self.layout.addWidget(control_group)
 
         pvdd_group = self.create_power_control_group('PVDD')
         self.layout.addWidget(pvdd_group)
@@ -493,6 +496,41 @@ class PowerSupplyControl(QWidget):
                 device.write(f'OCP {key[-1]},{max_current / 10}')
         except ValueError:
             pass  # 忽略无效输入
+
+    def create_measurement_control_group(self):
+        group = QGroupBox("Measurement Control")
+        layout = QHBoxLayout()
+
+        self.start_stop_button = QPushButton("Start")
+        self.start_stop_button.clicked.connect(self.toggle_measurement)
+        layout.addWidget(self.start_stop_button)
+
+        layout.addWidget(QLabel("Update Interval:"))
+        self.interval_combo = QComboBox()
+        self.interval_combo.addItems(["1s", "10s", "60s", "600s"])
+        self.interval_combo.currentIndexChanged.connect(self.change_update_interval)
+        layout.addWidget(self.interval_combo)
+
+        group.setLayout(layout)
+        return group
+
+    def toggle_measurement(self):
+        if self.timer.isActive():
+            self.timer.stop()
+            self.start_stop_button.setText("Start")
+        else:
+            interval = int(self.interval_combo.currentText()[:-1]) * 1000  # Convert to milliseconds
+            self.timer.start(interval)
+            self.start_stop_button.setText("Stop")
+
+    def change_update_interval(self):
+        if self.timer.isActive():
+            interval = int(self.interval_combo.currentText()[:-1]) * 1000  # Convert to milliseconds
+            self.timer.setInterval(interval)
+
+
+
+
     def update_measurements(self, key, voltage, current, power):
         # 更新测量值标签
         self.power_controls[key]['measured_voltage'].setText(f'Measured Voltage: <b>{voltage:.2f}</b> V')
