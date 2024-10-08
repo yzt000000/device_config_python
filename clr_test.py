@@ -1,5 +1,12 @@
-import sys, clr, pythonnet  #导入库
+import sys
+import clr
+import pythonnet
 
+print(f"Python version: {sys.version}")
+print(f"CLR version: {clr.__version__}")
+
+
+#pythonnet.load()  # 这一行很重要
 clr.AddReference("System.Drawing")              
 clr.AddReference("System.Windows.Forms")
 # Add a reference to the APx API        

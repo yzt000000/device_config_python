@@ -3,7 +3,7 @@ import random
 import logging
 import json
 from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QGroupBox, QPushButton, QSlider, QLabel, QLineEdit, QSizePolicy, QGridLayout
-from PyQt5.QtCore import Qt, QTimer, QThread, pyqtSignal
+from PyQt5.QtCore import Qt, QTimer, QThread, pyqtSignal,QObject
 import pyvisa
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
@@ -51,7 +51,57 @@ from PyQt5.QtCore import QMutex, QMutexLocker
 #         self.running = False
 #         self.wait()
 
-class MeasurementThread(QThread):
+# class MeasurementThread(QThread):
+#     measurement_signal = pyqtSignal(str, float, float, float)
+#     power_status_signal = pyqtSignal(str, bool)
+
+#     def __init__(self, instruments, power_controls):
+#         super().__init__()
+#         self.instruments = instruments
+#         self.power_controls = power_controls
+#         self.running = True
+
+#     def run(self):
+#         while self.running:
+#             for key, control in self.power_controls.items():
+#                 device = self.instruments[control['device']]
+
+#                 try:
+#                     # Check power status
+#                     if key == 'PVDD':
+#                         device.write('*CLS')
+#                         status = device.query('CONFigure:OUTPut?')
+#                         power_on = 'ON' in status
+#                     else:
+#                         channel = key[-1]
+#                         status = device.query(f'OUT? {channel}')
+#                         power_on = '1' in status
+
+#                     self.power_status_signal.emit(key, power_on)
+
+#                     # Measure voltage, current, and power
+#                     if key == 'PVDD':
+#                         measured_voltage = float(device.query('FETC:VOLT?'))
+#                         measured_current = float(device.query('FETC:CURR?'))
+#                     else:
+#                         channel = key[-1]
+#                         measured_voltage = float(device.query(f'VOUT? {channel}').replace('\n','').replace('\r',''))
+#                         measured_current = float(device.query(f'IOUT? {channel}').replace('\n','').replace('\r',''))
+#                     power = measured_voltage * measured_current
+#                     self.measurement_signal.emit(key, measured_voltage, measured_current, power)
+
+#                 except pyvisa.VisaIOError:
+#                     # Handle device access error
+#                     pass
+
+#             self.msleep(1000)  # Update measurements and status every second
+
+#     def stop(self):
+#         self.running = False
+#         self.wait()
+
+
+class MeasurementWorker(QObject):
     measurement_signal = pyqtSignal(str, float, float, float)
     power_status_signal = pyqtSignal(str, bool)
 
@@ -59,46 +109,38 @@ class MeasurementThread(QThread):
         super().__init__()
         self.instruments = instruments
         self.power_controls = power_controls
-        self.running = True
 
-    def run(self):
-        while self.running:
-            for key, control in self.power_controls.items():
-                device = self.instruments[control['device']]
+    def measure(self):
+        for key, control in self.power_controls.items():
+            device = self.instruments[control['device']]
 
-                try:
-                    # Check power status
-                    if key == 'PVDD':
-                        device.write('*CLS')
-                        status = device.query('CONFigure:OUTPut?')
-                        power_on = 'ON' in status
-                    else:
-                        channel = key[-1]
-                        status = device.query(f'OUT? {channel}')
-                        power_on = '1' in status
+            try:
+                # Check power status
+                if key == 'PVDD':
+                    device.write('*CLS')
+                    status = device.query('CONFigure:OUTPut?')
+                    power_on = 'ON' in status
+                else:
+                    channel = key[-1]
+                    status = device.query(f'OUT? {channel}')
+                    power_on = '1' in status
 
-                    self.power_status_signal.emit(key, power_on)
+                self.power_status_signal.emit(key, power_on)
 
-                    # Measure voltage, current, and power
-                    if key == 'PVDD':
-                        measured_voltage = float(device.query('FETC:VOLT?'))
-                        measured_current = float(device.query('FETC:CURR?'))
-                    else:
-                        channel = key[-1]
-                        measured_voltage = float(device.query(f'VOUT? {channel}').replace('\n','').replace('\r',''))
-                        measured_current = float(device.query(f'IOUT? {channel}').replace('\n','').replace('\r',''))
-                    power = measured_voltage * measured_current
-                    self.measurement_signal.emit(key, measured_voltage, measured_current, power)
+                # Measure voltage, current, and power
+                if key == 'PVDD':
+                    measured_voltage = float(device.query('FETC:VOLT?'))
+                    measured_current = float(device.query('FETC:CURR?'))
+                else:
+                    channel = key[-1]
+                    measured_voltage = float(device.query(f'VOUT? {channel}').replace('\n','').replace('\r',''))
+                    measured_current = float(device.query(f'IOUT? {channel}').replace('\n','').replace('\r',''))
+                power = measured_voltage * measured_current
+                self.measurement_signal.emit(key, measured_voltage, measured_current, power)
 
-                except pyvisa.VisaIOError:
-                    # Handle device access error
-                    pass
-
-            self.msleep(1000)  # Update measurements and status every second
-
-    def stop(self):
-        self.running = False
-        self.wait()
+            except pyvisa.VisaIOError as e:
+                print(f"Error communicating with {key}: {str(e)}")
+                # You might want to emit a signal here to update the UI about the error
 
 
 
@@ -151,10 +193,18 @@ class PowerSupplyControl(QWidget):
         # self.measurement_thread.measurement_signal.connect(self.update_measurements)
         # self.measurement_thread.start()
 
-        self.measurement_thread = MeasurementThread(self.instruments, self.power_controls)
-        self.measurement_thread.measurement_signal.connect(self.update_measurements)
-        self.measurement_thread.power_status_signal.connect(self.update_power_status)
-        self.measurement_thread.start()
+        # self.measurement_thread = MeasurementThread(self.instruments, self.power_controls)
+        # self.measurement_thread.measurement_signal.connect(self.update_measurements)
+        # self.measurement_thread.power_status_signal.connect(self.update_power_status)
+        # self.measurement_thread.start()
+
+        self.measurement_worker = MeasurementWorker(self.instruments, self.power_controls)
+        self.measurement_worker.measurement_signal.connect(self.update_measurements)
+        self.measurement_worker.power_status_signal.connect(self.update_power_status)
+
+        self.timer = QTimer(self)
+        self.timer.timeout.connect(self.measurement_worker.measure)
+        self.timer.start(10000)  # Update every 1000 ms (1 second)
 
 
 

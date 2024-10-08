@@ -2,6 +2,7 @@ from PyQt5.QtCore import pyqtSignal, QObject, Qt, QRect, QSize, QRegularExpressi
 from PyQt5.QtGui import QPainter, QColor, QFont, QTextCursor, QSyntaxHighlighter, QTextCharFormat, QTextFormat
 from usb_i2c import USBI2C
 from usb_ser import USB_UART
+from dmm import DMM34461
 from script_thread import ScriptThread
 from code_editor import CodeEditor
 from python_highlighter import PythonHighlighter
@@ -30,6 +31,7 @@ class I2CConfigPage(QWidget):
         super().__init__()
         self.usb_i2c = global_usb_i2c
         self.usb_uart = USB_UART()
+        self.dmm = DMM34461()
         self.device_address = global_device_address  # Initialize with None
         self.script_thread = None  # Initialize script thread to None
         self.devices = devices
@@ -184,7 +186,7 @@ class I2CConfigPage(QWidget):
 
     def execute_script(self):
         script = self.script_input.toPlainText()
-        self.script_thread = ScriptThread(script, self.read_i2c, self.write_i2c, self.power_switch_function, self.read_uart, self.write_uart, self.read_i2c_disp, self.write_i2c_disp)
+        self.script_thread = ScriptThread(script, self.read_i2c, self.write_i2c, self.power_switch_function,self.dmm, self.read_uart, self.write_uart, self.read_i2c_disp, self.write_i2c_disp)
         self.script_thread.output.connect(self.append_output)
         self.script_thread.finished.connect(self.on_script_finished)
         self.script_thread.paused.connect(self.on_script_paused)

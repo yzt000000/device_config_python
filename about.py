@@ -205,7 +205,39 @@ APx.BenchMode.Measurements.SteppedSweep.Start() #测试开始
 #APx.BenchMode.Measurements.SteppedSweep.Stop()  #测试中断
 #APx.BenchMode.Measurements.SteppedSweep.Source = SweepSourceParameterType.GeneratorLevel
 #APx.BenchMode.Measurements.SteppedSweep.SourceParameters.Start.Value
+############################## DMM ###########################################
+def __init__(self):
+def _find_dmm_resource(self):
+def _open_device(self, resourceName=""):
+def _show_instrument_message(self):
+def _reset_dmm(self):
+def _read_config(self):
+def _set_config(self, Measurementype, Range="DEF", Resolution="DEF"):
+def _config_current_parameter(self, Measurementype, Range="DEF", Resolution="DEF"):
+def _measuremen_diode(self):
+def _measuremen_frequency_or_period(self, Measurementype, Range="DEF", Resolution="DEF"):
+def _measuremen_resistance_or_fresistance(self, Measurementype, Range="DEF", Resolution="DEF"):
+def _config_voltage_parameter(self, Measurementype, Range="DEF", Resolution="DEF"):
+def _check_terminals(self, Terminals):
+def _sample(self):
+def _read_buff(self):
+def _finish(self):
+def _save_buff_to_csv(self, logpath):
+def _dmm_display(self, displayStr):
+def _dmm_display_clear(self):
+def _dmm_display_view(self, ViewType):
+def _set_limit(self, Limit_Low, Limit_Upp):
+def _limit_clear(self):
+def _set_limit_on_off(self, SetLimitONOFF="OFF"):
+def _read_questionable(self):
+def _set_trigger_source(self, Source):
+def _set_sample_count(self, Count):
+def _voltage_measuremen(self, VoltageType, Count=50, Range="DEF", Resolution="DEF", LimitLow=0, LimitUpp=0):
+def _current_measuremen(self, CurrentType, Count=50, Range="DEF", Resolution="DEF"):
+def connect_and_measure(self, resourceName=""):
+###############################################################
 ############################## Print ###########################################
+
 #Print
 # 绿色文本
 print('<span style="color: green;">这是一段绿色文本</span>')
