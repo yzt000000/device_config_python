@@ -206,11 +206,42 @@ class MainWindow(QWidget):
                 return True  # 如果剩余时间中没有包含 "days"，则认为时间还充足
         return False
 
+    # def auto_detect_devices(self):
+    #     # 检查缓存
+    #     cached_devices = self.load_cache()
+    #     if cached_devices:
+    #         return cached_devices
+
+    #     devices = {}
+    #     resources = self.rm.list_resources()
+
+    #     with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
+    #         future_to_resource = {executor.submit(self.detect_device, resource): resource for resource in resources}
+    #         for future in concurrent.futures.as_completed(future_to_resource):
+    #             device_type, instr = future.result()
+    #             if device_type:
+    #                 devices[device_type] = instr
+
+    #     # 如果未找到PVDD设备，设置为默认设备
+    #     if 'PVDD_device' not in devices:
+    #         devices['PVDD_device'] = "default_pvdd_device"
+
+    #     # 如果未找到CH设备，设置为默认设备
+    #     if 'CH_device' not in devices:
+    #         devices['CH_device'] = "default_ch_device"
+
+    #     # 保存缓存
+    #     self.save_cache(devices)
+
+    #     return devices
+
     def auto_detect_devices(self):
-        # 检查缓存
+        # Check cache
         cached_devices = self.load_cache()
         if cached_devices:
-            return cached_devices
+            # Verify if cached devices are not default and still accessible
+            if self.verify_cached_devices(cached_devices):
+                return cached_devices
 
         devices = {}
         resources = self.rm.list_resources()
@@ -222,18 +253,31 @@ class MainWindow(QWidget):
                 if device_type:
                     devices[device_type] = instr
 
-        # 如果未找到PVDD设备，设置为默认设备
+        # If PVDD device is not found, set to default device
         if 'PVDD_device' not in devices:
             devices['PVDD_device'] = "default_pvdd_device"
 
-        # 如果未找到CH设备，设置为默认设备
+        # If CH device is not found, set to default device
         if 'CH_device' not in devices:
             devices['CH_device'] = "default_ch_device"
 
-        # 保存缓存
+        # Save cache
         self.save_cache(devices)
 
         return devices
+
+    def verify_cached_devices(self, cached_devices):
+        for device_type, device_address in cached_devices.items():
+            if device_address in ["default_pvdd_device", "default_ch_device"]:
+                return False  # If any device is default, we need to re-detect
+            try:
+                # Try to open the device to check if it's still accessible
+                with self.rm.open_resource(device_address) as instr:
+                    instr.timeout = self.timeout * 1000
+                    instr.query('*IDN?')  # or 'ID?' depending on the device
+            except pyvisa.VisaIOError:
+                return False  # If any device is inaccessible, we need to re-detect
+        return True
 
     def detect_device(self, resource):
         try:

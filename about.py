@@ -66,7 +66,7 @@ for i in range(5):
 
 ##################### 电源 ###############################
 # 开关电源
-open_devices.open_devices()
+power_control.open_devices()
 power_control.toggle_power_func("CH1", "ON")   # 打开CH1
 power_control.toggle_power_func("CH2", "OFF")  # 关闭CH2
 

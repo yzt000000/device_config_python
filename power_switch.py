@@ -10,108 +10,54 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 import numpy as np
 from time import time
+from queue import Queue, Empty
+from threading import Event
 
 from PyQt5.QtCore import QMutex, QMutexLocker
 
-# class MeasurementThread(QThread):
-#     measurement_signal = pyqtSignal(str, float, float, float)
-
-#     def __init__(self, instruments, power_controls):
-#         super().__init__()
-#         self.instruments = instruments
-#         self.power_controls = power_controls
-#         self.running = True
-
-#     def run(self):
-#         while self.running:
-#             for key, control in self.power_controls.items():
-#                 device = self.instruments[control['device']]
-
-#                 try:
-
-#                     # 模拟测量值，实际使用时替换为真实的测量命令
-#                     if key == 'PVDD':
-#                         measured_voltage = float(device.query('FETC:VOLT?'))
-#                         measured_current = float(device.query('FETC:CURR?'))
-#                     else:
-#                         channel = key[-1]
-#                         measured_voltage = float(device.query(f'VOUT? {channel}').replace('\n','').replace('\r',''))
-#                         measured_current = float(device.query(f'IOUT? {channel}').replace('\n','').replace('\r',''))
-#                     power = measured_voltage * measured_current
-#                     #power = measured_voltage * 1
-#                     self.measurement_signal.emit(key, measured_voltage, measured_current, power)
-#                 except pyvisa.VisaIOError:
-#                      # 处理设备访问错误
-#                      pass
-
-
-#             self.msleep(1000)  # 每秒更新一次测量值
-
-#     def stop(self):
-#         self.running = False
-#         self.wait()
-
-# class MeasurementThread(QThread):
-#     measurement_signal = pyqtSignal(str, float, float, float)
-#     power_status_signal = pyqtSignal(str, bool)
-
-#     def __init__(self, instruments, power_controls):
-#         super().__init__()
-#         self.instruments = instruments
-#         self.power_controls = power_controls
-#         self.running = True
-
-#     def run(self):
-#         while self.running:
-#             for key, control in self.power_controls.items():
-#                 device = self.instruments[control['device']]
-
-#                 try:
-#                     # Check power status
-#                     if key == 'PVDD':
-#                         device.write('*CLS')
-#                         status = device.query('CONFigure:OUTPut?')
-#                         power_on = 'ON' in status
-#                     else:
-#                         channel = key[-1]
-#                         status = device.query(f'OUT? {channel}')
-#                         power_on = '1' in status
-
-#                     self.power_status_signal.emit(key, power_on)
-
-#                     # Measure voltage, current, and power
-#                     if key == 'PVDD':
-#                         measured_voltage = float(device.query('FETC:VOLT?'))
-#                         measured_current = float(device.query('FETC:CURR?'))
-#                     else:
-#                         channel = key[-1]
-#                         measured_voltage = float(device.query(f'VOUT? {channel}').replace('\n','').replace('\r',''))
-#                         measured_current = float(device.query(f'IOUT? {channel}').replace('\n','').replace('\r',''))
-#                     power = measured_voltage * measured_current
-#                     self.measurement_signal.emit(key, measured_voltage, measured_current, power)
-
-#                 except pyvisa.VisaIOError:
-#                     # Handle device access error
-#                     pass
-
-#             self.msleep(1000)  # Update measurements and status every second
-
-#     def stop(self):
-#         self.running = False
-#         self.wait()
-
-
-class MeasurementWorker(QObject):
+class MeasurementThread(QThread):
     measurement_signal = pyqtSignal(str, float, float, float)
     power_status_signal = pyqtSignal(str, bool)
+    error_signal = pyqtSignal(str)
 
     def __init__(self, instruments, power_controls):
         super().__init__()
         self.instruments = instruments
         self.power_controls = power_controls
+        self.running = False
+        self.interval = 1  # Default interval in seconds
+        self.task_queue = Queue()
+        self.measurement_complete = Event()
 
-    def measure(self):
+    def run(self):
+        self.running = True
+        while self.running:
+            try:
+                # Wait for the next measurement task or timeout
+                try:
+                    task = self.task_queue.get(timeout=0.1)
+                except Empty:
+                    continue
+
+                start_time = time.time()
+                self.perform_measurement()
+                elapsed_time = time.time() - start_time
+
+                # Signal that the measurement is complete
+                self.measurement_complete.set()
+
+                # If there's remaining time, sleep
+                if elapsed_time < self.interval:
+                    time.sleep(self.interval - elapsed_time)
+
+            except Exception as e:
+                self.error_signal.emit(str(e))
+
+    def perform_measurement(self):
         for key, control in self.power_controls.items():
+            if not self.running:
+                break
+
             device = self.instruments[control['device']]
 
             try:
@@ -139,8 +85,17 @@ class MeasurementWorker(QObject):
                 self.measurement_signal.emit(key, measured_voltage, measured_current, power)
 
             except pyvisa.VisaIOError as e:
-                print(f"Error communicating with {key}: {str(e)}")
-                # You might want to emit a signal here to update the UI about the error
+                self.error_signal.emit(f"Error communicating with {key}: {str(e)}")
+
+    def stop(self):
+        self.running = False
+
+    def set_interval(self, interval):
+        self.interval = interval
+
+    def schedule_measurement(self):
+        self.task_queue.put(True)
+
 
 
 
@@ -190,24 +145,13 @@ class PowerSupplyControl(QWidget):
         self.setLayout(self.layout)
         self.setWindowTitle('Power Supply Control')
 
-        #self.check_power_status()  # 检查电源状态
+        self.measurement_thread = MeasurementThread(self.instruments, self.power_controls)
+        self.measurement_thread.measurement_signal.connect(self.update_measurements)
+        self.measurement_thread.power_status_signal.connect(self.update_power_status)
+        self.measurement_thread.error_signal.connect(self.handle_error)
 
-        # self.measurement_thread = MeasurementThread(self.instruments, self.power_controls)
-        # self.measurement_thread.measurement_signal.connect(self.update_measurements)
-        # self.measurement_thread.start()
-
-        # self.measurement_thread = MeasurementThread(self.instruments, self.power_controls)
-        # self.measurement_thread.measurement_signal.connect(self.update_measurements)
-        # self.measurement_thread.power_status_signal.connect(self.update_power_status)
-        # self.measurement_thread.start()
-
-        self.measurement_worker = MeasurementWorker(self.instruments, self.power_controls)
-        self.measurement_worker.measurement_signal.connect(self.update_measurements)
-        self.measurement_worker.power_status_signal.connect(self.update_power_status)
-
-        self.timer = QTimer(self)
-        self.timer.timeout.connect(self.measurement_worker.measure)
-        self.timer.start(10000)  # Update every 1000 ms (1 second)
+        self.measurement_timer = QTimer(self)
+        self.measurement_timer.timeout.connect(self.schedule_measurement)
 
 
 
@@ -226,40 +170,7 @@ class PowerSupplyControl(QWidget):
         if power_on:
             self.set_voltage(key, self.power_controls[key]['voltage_slider'].value())
 
-    # def check_power_status(self):
-    #     for key, control in self.power_controls.items():
-    #         device = self.instruments[control['device']]
-    #         try:
-    #             if key == 'PVDD':
-    #                 #device.write('*CLS')
-    #                 try:
-    #                     device.write('*CLS')
-    #                     status = device.query('CONFigure:OUTPut?')
-    #                     if 'ON' in status:
-    #                         control['button'].setChecked(True)
-    #                         self.set_voltage(key, control['voltage_slider'].value())
-    #                 except pyvisa.VisaIOError:
-    #                     control['button'].setChecked(False)
-    #                     pass
-    #             else:
-    #                 try:
-    #                     channel = key[-1]
-    #                     status = device.query(f'OUT? {channel}')
-    #                     if '1' in status:
-    #                         control['button'].setChecked(True)
-    #                         self.set_voltage(key, control['voltage_slider'].value())
-    #                 except pyvisa.VisaIOError:
-    #                     control['button'].setChecked(False) 
-    #                     pass
-    #         except pyvisa.VisaIOError:
-    #             # 处理设备访问错误
-    #             pass
-
     
-
-    def closeEvent(self, event):
-        self.measurement_thread.stop()
-        event.accept()
 
     def create_power_control_group(self, key):
         group_box = QGroupBox(key)
@@ -512,21 +423,39 @@ class PowerSupplyControl(QWidget):
         layout.addWidget(self.interval_combo)
 
         group.setLayout(layout)
-        return group
+        return group        
 
     def toggle_measurement(self):
-        if self.timer.isActive():
-            self.timer.stop()
+        if self.measurement_thread.isRunning():
+            self.measurement_thread.stop()
+            self.measurement_timer.stop()
+            self.measurement_thread.wait()
             self.start_stop_button.setText("Start")
         else:
-            interval = int(self.interval_combo.currentText()[:-1]) * 1000  # Convert to milliseconds
-            self.timer.start(interval)
+            interval = int(self.interval_combo.currentText()[:-1])
+            self.measurement_thread.set_interval(interval)
+            self.measurement_thread.start()
+            self.measurement_timer.start(interval * 1000)  # Convert to milliseconds
             self.start_stop_button.setText("Stop")
 
     def change_update_interval(self):
-        if self.timer.isActive():
-            interval = int(self.interval_combo.currentText()[:-1]) * 1000  # Convert to milliseconds
-            self.timer.setInterval(interval)
+        interval = int(self.interval_combo.currentText()[:-1])
+        self.measurement_thread.set_interval(interval)
+        if self.measurement_timer.isActive():
+            self.measurement_timer.setInterval(interval * 1000)  # Convert to milliseconds
+    def schedule_measurement(self):
+        if not self.measurement_thread.measurement_complete.is_set():
+            print("Warning: Previous measurement not complete. Skipping this cycle.")
+            return
+        self.measurement_thread.measurement_complete.clear()
+        self.measurement_thread.schedule_measurement()
+        
+    def closeEvent(self, event):
+        if self.measurement_thread.isRunning():
+            self.measurement_thread.stop()
+            self.measurement_timer.stop()
+            self.measurement_thread.wait()
+        super().closeEvent(event)
 
 
 
