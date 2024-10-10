@@ -33,9 +33,9 @@ class MainWindow(QWidget):
         self.checker = LicenseChecker()
 
         # 初始化定时器，1分钟后开始第一次许可证检查
-        self.timer = QTimer(self)
-        self.timer.timeout.connect(self.initial_license_check)
-        self.timer.start(300000)  # 1分钟 (60000毫秒) 的等待时间
+        # self.timer = QTimer(self)
+        # self.timer.timeout.connect(self.initial_license_check)
+        # self.timer.start(300000)  # 1分钟 (60000毫秒) 的等待时间
 
         # 如果许可证有效，继续运行程序
         
@@ -107,11 +107,14 @@ class MainWindow(QWidget):
         self.power_supply_control = PowerSupplyControl(self.devices)
         self.page0 = QWidget()
         page0_layout = QVBoxLayout()
+        page0_layout.setSpacing(0)  # 设置布局中的间距为0
+        page0_layout.setContentsMargins(0, 0, 0, 0)  # 设置布局的边距为0
         # 添加开关控件（QCheckBox）
         self.page0_switch = QCheckBox("Enable Power Control")
         self.page0_switch.setChecked(False)  # 默认关闭
         self.page0_switch.stateChanged.connect(self.toggle_page0)
 
+        
         page0_layout.addWidget(self.page0_switch)
         page0_layout.addWidget(self.power_supply_control)
         self.page0.setLayout(page0_layout)

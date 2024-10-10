@@ -128,6 +128,7 @@ class PowerSupplyControl(QWidget):
 
         # Add control panel for measurement
         control_group = self.create_measurement_control_group()
+        #control_group.setStyleSheet("border: 1px solid black;")  # 添加边框
         self.layout.addWidget(control_group)
 
         pvdd_group = self.create_power_control_group('PVDD')
@@ -423,6 +424,10 @@ class PowerSupplyControl(QWidget):
         self.interval_combo.currentIndexChanged.connect(self.change_update_interval)
         layout.addWidget(self.interval_combo)
 
+        # 设置布局的高度
+        layout.setContentsMargins(10, 10, 10, 10)
+        layout.setSpacing(10)
+
         group.setLayout(layout)
         return group        
 
@@ -432,11 +437,15 @@ class PowerSupplyControl(QWidget):
             self.measurement_timer.stop()
             self.measurement_thread.wait()
             self.start_stop_button.setText("Start")
+            self.start_stop_button.setStyleSheet("background-color: red")
+            
         else:
             interval = int(self.interval_combo.currentText()[:-1])
             self.measurement_thread.start()
             self.measurement_timer.start(interval * 1000)  # Convert to milliseconds
-            self.start_stop_button.setText("Stop")
+            #self.start_stop_button.setText("Stop")
+            self.start_stop_button.setText("Running")
+            self.start_stop_button.setStyleSheet("background-color: green")
             self.request_measurement()  # Start the first measurement immediately
 
     def change_update_interval(self):
@@ -467,8 +476,21 @@ class PowerSupplyControl(QWidget):
             self.measurement_thread.wait()
         super().closeEvent(event)
 
-    def handle_error(self, error_message):
+    # def handle_error(self, error_message):
+    #     print(f"Error: {error_message}")
+
+
+    def display_error(self, error_message):
         print(f"Error: {error_message}")
+        # You can also update GUI here to display the error, if needed
+
+    def check_errors(self):
+        try:
+            while True:
+                error = self.error_handler.error_queue.get_nowait()
+                self.display_error(error)
+        except Empty:
+            pass
 
 
     def update_measurements(self, key, voltage, current, power):
@@ -518,4 +540,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
