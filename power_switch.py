@@ -160,7 +160,7 @@ class PowerSupplyControl(QWidget):
         opened_devices = {}
         for device_name, device_info in device_config.items():
             # 提取 GPIB 地址
-            address = device_info.split(' at ')[1]
+            address = str(device_info).split(' at ')[1]
             opened_devices[device_name] = self.rm.open_resource(address)
         return opened_devices
     
@@ -457,7 +457,8 @@ class PowerSupplyControl(QWidget):
             self.measurement_thread.wait()
         super().closeEvent(event)
 
-
+    def handle_error(self, error_message):
+        print(f"Error: {error_message}")
 
 
     def update_measurements(self, key, voltage, current, power):
