@@ -15,43 +15,39 @@ from threading import Event
 
 from PyQt5.QtCore import QMutex, QMutexLocker
 
+class ErrorHandler(QObject):
+    error_signal = pyqtSignal(str)
+
+    def __init__(self):
+        super().__init__()
+        self.error_queue = Queue()
+
+    def handle_error(self, error_message):
+        self.error_queue.put(error_message)
+        self.error_signal.emit(error_message)
+
 class MeasurementThread(QThread):
     measurement_signal = pyqtSignal(str, float, float, float)
     power_status_signal = pyqtSignal(str, bool)
-    error_signal = pyqtSignal(str)
+    measurement_complete = pyqtSignal()
 
-    def __init__(self, instruments, power_controls):
+    def __init__(self, instruments, power_controls, error_handler):
         super().__init__()
         self.instruments = instruments
         self.power_controls = power_controls
         self.running = False
-        self.interval = 1  # Default interval in seconds
-        self.task_queue = Queue()
-        self.measurement_complete = Event()
+        self.measurement_requested = Event()
+        self.error_handler = error_handler
 
     def run(self):
         self.running = True
         while self.running:
-            try:
-                # Wait for the next measurement task or timeout
-                try:
-                    task = self.task_queue.get(timeout=0.1)
-                except Empty:
-                    continue
-
-                start_time = time.time()
-                self.perform_measurement()
-                elapsed_time = time.time() - start_time
-
-                # Signal that the measurement is complete
-                self.measurement_complete.set()
-
-                # If there's remaining time, sleep
-                if elapsed_time < self.interval:
-                    time.sleep(self.interval - elapsed_time)
-
-            except Exception as e:
-                self.error_signal.emit(str(e))
+            self.measurement_requested.wait()
+            if not self.running:
+                break
+            self.measurement_requested.clear()
+            self.perform_measurement()
+            self.measurement_complete.emit()
 
     def perform_measurement(self):
         for key, control in self.power_controls.items():
@@ -85,16 +81,14 @@ class MeasurementThread(QThread):
                 self.measurement_signal.emit(key, measured_voltage, measured_current, power)
 
             except pyvisa.VisaIOError as e:
-                self.error_signal.emit(f"Error communicating with {key}: {str(e)}")
+                self.error_handler.handle_error(f"Error communicating with {key}: {str(e)}")
 
     def stop(self):
         self.running = False
+        self.measurement_requested.set()  # Wake up the thread to exit
 
-    def set_interval(self, interval):
-        self.interval = interval
-
-    def schedule_measurement(self):
-        self.task_queue.put(True)
+    def request_measurement(self):
+        self.measurement_requested.set()
 
 
 
@@ -106,6 +100,8 @@ class PowerSupplyControl(QWidget):
         self.devices = devices
         #self.init_ui()
         self.initialized = False  # 添加一个标志来检查是否已经被初始化
+        self.error_handler = ErrorHandler()
+        self.error_handler.error_signal.connect(self.display_error)
 
 
     def init_ui(self):
@@ -145,13 +141,18 @@ class PowerSupplyControl(QWidget):
         self.setLayout(self.layout)
         self.setWindowTitle('Power Supply Control')
 
-        self.measurement_thread = MeasurementThread(self.instruments, self.power_controls)
+        self.measurement_thread = MeasurementThread(self.instruments, self.power_controls, self.error_handler)
         self.measurement_thread.measurement_signal.connect(self.update_measurements)
         self.measurement_thread.power_status_signal.connect(self.update_power_status)
-        self.measurement_thread.error_signal.connect(self.handle_error)
+        self.measurement_thread.measurement_complete.connect(self.on_measurement_complete)
 
         self.measurement_timer = QTimer(self)
-        self.measurement_timer.timeout.connect(self.schedule_measurement)
+        self.measurement_timer.timeout.connect(self.request_measurement)
+
+        # Add error checking timer
+        self.error_check_timer = QTimer(self)
+        self.error_check_timer.timeout.connect(self.check_errors)
+        self.error_check_timer.start(100)  # Check for errors every 100 ms
 
 
 
@@ -433,16 +434,25 @@ class PowerSupplyControl(QWidget):
             self.start_stop_button.setText("Start")
         else:
             interval = int(self.interval_combo.currentText()[:-1])
-            self.measurement_thread.set_interval(interval)
             self.measurement_thread.start()
             self.measurement_timer.start(interval * 1000)  # Convert to milliseconds
             self.start_stop_button.setText("Stop")
+            self.request_measurement()  # Start the first measurement immediately
 
     def change_update_interval(self):
         interval = int(self.interval_combo.currentText()[:-1])
-        self.measurement_thread.set_interval(interval)
         if self.measurement_timer.isActive():
             self.measurement_timer.setInterval(interval * 1000)  # Convert to milliseconds
+
+    def request_measurement(self):
+        self.measurement_thread.request_measurement()
+
+    def on_measurement_complete(self):
+        # This method is called when a measurement is complete
+        # You can add any post-measurement logic here if needed
+        pass       
+
+
     def schedule_measurement(self):
         if not self.measurement_thread.measurement_complete.is_set():
             print("Warning: Previous measurement not complete. Skipping this cycle.")
