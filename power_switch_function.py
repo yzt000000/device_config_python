@@ -41,7 +41,9 @@ class power_switch_function():
         opened_devices = {}
         for device_name, device_info in device_config.items():
             try:
-                address = device_info.split(' at ')[1]
+                # 提取 GPIB 地址
+                address = str(device_info).split(' at ')[1]
+                #address = device_info.split(' at ')[1]
             except IndexError:
                 print(f"设备信息格式错误: {device_info}")
                 continue
