@@ -15,7 +15,7 @@ class USB_UART():
 
         if self.ports:
             selected_port = self.ports[0].device
-            print(f"Using port: {selected_port}")
+            #print(f"Using port: {selected_port}")
             try:
                 # 打开串口
                 ser = serial.Serial(selected_port, baudrate=9600, timeout=1)
@@ -30,7 +30,8 @@ class USB_UART():
                     hex_data = ' '.join([f'{byte:02X}' for byte in data])
                     #print(f"接收到的十六进制数据: {hex_data}")
                     return hex_data
-                # 关闭串口
+                # # 关闭串口
+                return hex_string
                 ser.close()
             except serial.SerialException as e:
                 print(f"Error opening or using serial port: {e}")

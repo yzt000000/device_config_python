@@ -32,10 +32,10 @@ class MainWindow(QWidget):
         # 初始化 LicenseChecker
         self.checker = LicenseChecker()
 
-        # 初始化定时器，1分钟后开始第一次许可证检查
-        self.timer = QTimer(self)
-        self.timer.timeout.connect(self.initial_license_check)
-        self.timer.start(300000)  # 1分钟 (60000毫秒) 的等待时间
+        # # 初始化定时器，1分钟后开始第一次许可证检查
+        # self.timer = QTimer(self)
+        # self.timer.timeout.connect(self.initial_license_check)
+        # self.timer.start(300000)  # 1分钟 (60000毫秒) 的等待时间
 
         # 如果许可证有效，继续运行程序
         
