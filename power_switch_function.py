@@ -172,7 +172,11 @@ class power_switch_function():
             pass
             # CH1-CH4 的电流设置命令
             #device.write(f'CURR {key[-1]},{current}')
-            device.write(f'OCP {key[-1]},1')
+            if(value >0) :
+                device.write(f'OCP {key[-1]},1')
+            else:
+                device.write(f'OCP {key[-1]},0')
+
 
     def set_current_limit(self, key, value):
         device = self.instruments[self.power_controls[key]['device']]
@@ -187,7 +191,11 @@ class power_switch_function():
             pass
             # CH1-CH4 的电流设置命令
             #device.write(f'CURR {key[-1]},{current}')
-            device.write(f'OCP {key[-1]},1')
+            #device.write(f'OCP {key[-1]},1')
+            if(value >0) :
+                device.write(f'OCP {key[-1]},1')
+            else:
+                device.write(f'OCP {key[-1]},0')
 
     def read_voltage(self, key):
         device = self.instruments[self.power_controls[key]['device']]

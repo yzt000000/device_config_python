@@ -357,7 +357,7 @@ class PowerSupplyControl(QWidget):
             pass
             # CH1-CH4 的电流设置命令
             device.write(f'CURR {key[-1]},{current}')
-            device.write(f'OCP {key[-1]},1')
+            #device.write(f'OCP {key[-1]},1')
         label = self.power_controls[key]['current_label']
         label.setText(f'Set Current: {current} A')
     

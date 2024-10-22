@@ -64,8 +64,10 @@ class MainWindow(QWidget):
 
         self.global_device_address_input = QComboBox(self)
         self.global_device_address_input.setFixedWidth(100)
+        # 允许编辑，即可以手动输入设备地址
+        self.global_device_address_input.setEditable(True)
         # 添加地址范围选项
-        for i in range(0x60, 0x70):
+        for i in range(0x60, 0x80):
             self.global_device_address_input.addItem(f"0x{i:02X}", i)
 
         # 添加特定设备选项
